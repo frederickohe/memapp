@@ -13,5 +13,5 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
-  ]
+, "app/(auth)/log-or-sign.jsx", "app/(auth)/login.jsx", "app/(auth)/phone-number.jsx", "app/_layout.jsx", "app/(tabs)/index.jsx", "app/(tabs)/explore.jsx", "app/(tabs)/_layout.jsx", "app/(auth)/confirmation-code.jsx"  ]
 }
