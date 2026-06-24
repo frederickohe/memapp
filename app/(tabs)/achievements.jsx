@@ -6,7 +6,7 @@ export default function ExploreScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>Explore</Text>
+        <Text style={styles.title}>Achievement</Text>
         <Text style={styles.subtitle}>More features coming soon</Text>
       </View>
     </SafeAreaView>
@@ -26,7 +26,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: "600",
+    fontWeight: "400",
     color: "#000",
     marginBottom: 8,
   },

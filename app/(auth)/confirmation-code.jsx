@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -16,15 +16,29 @@ import { SafeAreaView } from "react-native-safe-area-context"
 export default function ConfirmationCodeScreen() {
   const router = useRouter();
   const [code, setCode] = useState(["", "", "", ""]);
+  const inputRefs = useRef([]);
 
   const handleCodeChange = (index, value) => {
     const newCode = [...code];
-    newCode[index] = value.replace(/[^0-9]/g, "");
+    const cleanValue = value.replace(/[^0-9]/g, "");
+    newCode[index] = cleanValue;
     setCode(newCode);
 
-    // Auto move to next input
-    if (value && index < 3) {
-      // Focus next input (would need ref in production)
+    // Auto move to next input if a digit is entered
+    if (cleanValue && index < 3) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyPress = (index, event) => {
+    if (event.nativeEvent.key === "Backspace") {
+      if (!code[index] && index > 0) {
+        // If current field is empty, clear the previous field and focus it
+        const newCode = [...code];
+        newCode[index - 1] = "";
+        setCode(newCode);
+        inputRefs.current[index - 1]?.focus();
+      }
     }
   };
 
@@ -32,7 +46,7 @@ export default function ConfirmationCodeScreen() {
     const fullCode = code.join("");
     if (fullCode.length === 4) {
       // Navigate to main app
-      router.replace("/(tabs)");
+      router.replace("/(onboarding)/welcome");
     }
   };
 
@@ -65,12 +79,14 @@ export default function ConfirmationCodeScreen() {
               <View style={styles.codeInputContainer}>
                 {code.map((digit, index) => (
                   <TextInput
+                    ref={(ref) => (inputRefs.current[index] = ref)}
                     key={index}
                     style={styles.codeInput}
                     maxLength={1}
                     keyboardType="numeric"
                     value={digit}
                     onChangeText={(value) => handleCodeChange(index, value)}
+                    onKeyPress={(event) => handleKeyPress(index, event)}
                     placeholder="-"
                     placeholderTextColor="#ccc"
                   />
@@ -130,7 +146,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: "600",
+    fontWeight: "400",
     color: "#000",
     marginBottom: 24,
   },
@@ -165,7 +181,7 @@ const styles = StyleSheet.create({
     borderColor: "#e0e0e0",
     borderRadius: 12,
     fontSize: 24,
-    fontWeight: "600",
+    fontWeight: "400",
     textAlign: "center",
     backgroundColor: "#f9f9f9",
   },
@@ -182,7 +198,7 @@ const styles = StyleSheet.create({
   resendLink: {
     fontSize: 14,
     color: "#0066cc",
-    fontWeight: "600",
+    fontWeight: "400",
   },
   confirmButton: {
     backgroundColor: "#000",
@@ -196,7 +212,7 @@ const styles = StyleSheet.create({
   },
   confirmButtonText: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "400",
     color: "#fff",
   },
 });

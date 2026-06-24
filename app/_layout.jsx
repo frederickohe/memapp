@@ -39,7 +39,18 @@ export default function RootLayout() {
     <>
       <Stack>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="news" options={{ headerShown: false }} />
+        <Stack.Screen name="impact" options={{ headerShown: false }} />
+        <Stack.Screen name="connect" options={{ headerShown: false }} />
+        <Stack.Screen name="programs" options={{ headerShown: false }} />
+        <Stack.Screen name="surveys" options={{ headerShown: false }} />
+        <Stack.Screen name="affiliation" options={{ headerShown: false }} />
+        <Stack.Screen name="payment-method" options={{ headerShown: false }} />
+        <Stack.Screen name="pay-upi" options={{ headerShown: false }} />
+        <Stack.Screen name="pay-card" options={{ headerShown: false }} />
+        <Stack.Screen name="add-card" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
 

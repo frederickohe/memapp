@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
   },
   appName: {
     fontSize: 24,
-    fontWeight: "600",
+    fontWeight: "400",
     color: "#000",
   },
   welcomeText: {

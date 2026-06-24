@@ -1,7 +1,7 @@
 import { Tabs } from "expo-router";
 import React from "react";
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { Home, Gift, User, Bike } from 'lucide-react-native';
+import { Home, Gift, User, Bike, Award } from 'lucide-react-native';
 import { scaleFont } from "@/components/scale"
 
 function TabIcon({ focused, IconComponent, size = Math.round(scaleFont(20)) }) {
@@ -41,9 +41,16 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="achievements"
         options={{
-          title: "Explore",
+          title: "Achievements",
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} IconComponent={Award} /> 
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "Profile",
           tabBarIcon: ({ focused }) => <TabIcon focused={focused} IconComponent={User} /> 
         }}
       />

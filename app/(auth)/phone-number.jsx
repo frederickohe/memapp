@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: "600",
+    fontWeight: "400",
     color: "#000",
     marginBottom: 8,
   },
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   },
   getCodeButtonText: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "400",
     color: "#fff",
   },
 });
