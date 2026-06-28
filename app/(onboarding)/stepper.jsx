@@ -18,6 +18,7 @@ import {
   ConsentRow,
   OnboardingButton,
 } from "@/components/OnboardingFormComponents";
+import { ManIcon, WomanIcon } from "@/components/GenderIcons";
 
 // ─── Step definitions ────────────────────────────────────────
 const STEPS = [
@@ -189,8 +190,16 @@ export default function OnboardingStepperScreen() {
                   ]}
                   onPress={() => set("gender", "male")}
                 >
-                  <View style={styles.genderAvatar}>
-                    <Text style={styles.genderEmoji}>🧍‍♂️</Text>
+                  <View
+                    style={[
+                      styles.genderAvatar,
+                      form.gender === "male" && styles.genderAvatarActive,
+                    ]}
+                  >
+                    <ManIcon
+                      size={30}
+                      color={form.gender === "male" ? "#000" : "#777"}
+                    />
                   </View>
                   <Text style={styles.genderText}>Male</Text>
                 </TouchableOpacity>
@@ -201,8 +210,16 @@ export default function OnboardingStepperScreen() {
                   ]}
                   onPress={() => set("gender", "female")}
                 >
-                  <View style={styles.genderAvatar}>
-                    <Text style={styles.genderEmoji}>🧍‍♀️</Text>
+                  <View
+                    style={[
+                      styles.genderAvatar,
+                      form.gender === "female" && styles.genderAvatarActive,
+                    ]}
+                  >
+                    <WomanIcon
+                      size={30}
+                      color={form.gender === "female" ? "#000" : "#777"}
+                    />
                   </View>
                   <Text style={styles.genderText}>Female</Text>
                 </TouchableOpacity>
@@ -647,8 +664,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 6,
   },
-  genderEmoji: {
-    fontSize: 26,
+  genderAvatarActive: {
+    backgroundColor: "#dcdcdc",
   },
   genderText: {
     fontSize: 13,

@@ -1,11 +1,41 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from "react-native";
+import { Check, ChevronDown } from "lucide-react-native";
+import Reanimated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
+
+if (
+  Platform.OS === "android" &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+// Smooth expand / collapse config for the dropdown menu.
+const DROPDOWN_ANIM = {
+  duration: 220,
+  create: {
+    type: LayoutAnimation.Types.easeInEaseOut,
+    property: LayoutAnimation.Properties.opacity,
+  },
+  update: { type: LayoutAnimation.Types.easeInEaseOut },
+  delete: {
+    type: LayoutAnimation.Types.easeInEaseOut,
+    property: LayoutAnimation.Properties.opacity,
+  },
+};
 
 /**
  * A single form row with label + text input or dropdown indicator.
@@ -24,6 +54,34 @@ export function FormField({
   multiline = false,
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+
+  // Animated chevron rotation.
+  const chevronRotation = useSharedValue(0);
+  useEffect(() => {
+    chevronRotation.value = withTiming(isOpen ? 180 : 0, { duration: 220 });
+  }, [isOpen]);
+  const chevronStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${chevronRotation.value}deg` }],
+  }));
+
+  const toggleDropdown = () => {
+    LayoutAnimation.configureNext(DROPDOWN_ANIM);
+    setIsOpen((open) => !open);
+  };
+
+  const selectOption = (option) => {
+    LayoutAnimation.configureNext(DROPDOWN_ANIM);
+    onSelect?.(option);
+    setIsOpen(false);
+  };
+
+  const isFilled = !!(value && String(value).trim().length > 0);
+  // Center the text/cursor while typing, and keep it centered once filled.
+  const centerText = isFocused || isFilled;
+  // Show the green "filled" indicator once the user is done (field has a value
+  // and is no longer focused) and there is no error.
+  const showFilledIndicator = isFilled && !isFocused && !hasError;
 
   return (
     <View style={styles.fieldRow}>
@@ -32,13 +90,29 @@ export function FormField({
         {isDropdown ? (
           <TouchableOpacity
             style={styles.dropdownRow}
-            onPress={() => setIsOpen(!isOpen)}
+            onPress={toggleDropdown}
             activeOpacity={0.7}
           >
-            <Text style={[styles.input, !value && styles.placeholder]}>
+            <Text
+              style={[styles.dropdownValue, !value && styles.placeholder]}
+              numberOfLines={1}
+            >
               {value || placeholder}
             </Text>
-            <Text style={styles.dropdownArrow}>{isOpen ? "▲" : "▼"}</Text>
+            <View style={styles.dropdownRight}>
+              {isFilled && (
+                <View style={styles.filledIndicatorSmall}>
+                  <Check size={11} color="#fff" strokeWidth={3} />
+                </View>
+              )}
+              <Reanimated.View style={[styles.chevronWrap, chevronStyle]}>
+                <ChevronDown
+                  size={18}
+                  color={isOpen ? "#111" : "#9a9a9a"}
+                  strokeWidth={2}
+                />
+              </Reanimated.View>
+            </View>
           </TouchableOpacity>
         ) : (
           <TextInput
@@ -49,6 +123,9 @@ export function FormField({
             ]}
             value={value}
             onChangeText={onChangeText}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            textAlign={centerText ? "center" : "left"}
             placeholder={placeholder}
             placeholderTextColor="#bbb"
             keyboardType={keyboardType}
@@ -57,36 +134,50 @@ export function FormField({
             numberOfLines={multiline ? 3 : 1}
           />
         )}
-        {hasError && <View style={styles.errorDot} />}
+        {!isDropdown && hasError ? (
+          <View style={styles.errorDot} />
+        ) : !isDropdown && showFilledIndicator ? (
+          <View style={styles.filledIndicator}>
+            <Check size={12} color="#fff" strokeWidth={3} />
+          </View>
+        ) : null}
       </View>
 
       {/* Custom Inline Dropdown List */}
       {isDropdown && isOpen && options.length > 0 && (
         <View style={styles.optionsContainer}>
-          {options.map((option) => (
-            <TouchableOpacity
-              key={option}
-              style={styles.optionRow}
-              activeOpacity={0.7}
-              onPress={() => {
-                onSelect?.(option);
-                setIsOpen(false);
-              }}
-            >
-              <Text
+          {options.map((option, index) => {
+            const selected = value === option;
+            const isLast = index === options.length - 1;
+            return (
+              <TouchableOpacity
+                key={option}
                 style={[
-                  styles.optionText,
-                  value === option && styles.optionTextSelected,
+                  styles.optionRow,
+                  isLast && styles.optionRowLast,
+                  selected && styles.optionRowSelected,
                 ]}
+                activeOpacity={0.7}
+                onPress={() => selectOption(option)}
               >
-                {option}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text
+                  style={[
+                    styles.optionText,
+                    selected && styles.optionTextSelected,
+                  ]}
+                >
+                  {option}
+                </Text>
+                {selected && (
+                  <Check size={16} color="#22C55E" strokeWidth={3} />
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
       )}
 
-      <View style={styles.divider} />
+      <View style={[styles.divider, showFilledIndicator && styles.dividerFilled]} />
     </View>
   );
 }
@@ -160,12 +251,29 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 8,
+    justifyContent: "space-between",
+    paddingVertical: 9,
   },
-  dropdownArrow: {
-    fontSize: 10,
-    color: "#888",
-    marginLeft: 6,
+  dropdownValue: {
+    flex: 1,
+    fontSize: 14,
+    color: "#111",
+  },
+  dropdownRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginLeft: 8,
+  },
+  chevronWrap: {
+    marginLeft: 8,
+  },
+  filledIndicatorSmall: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: "#22C55E",
+    justifyContent: "center",
+    alignItems: "center",
   },
   errorDot: {
     width: 8,
@@ -174,36 +282,63 @@ const styles = StyleSheet.create({
     backgroundColor: "#e53935",
     marginLeft: 8,
   },
+  filledIndicator: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#22C55E",
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 8,
+  },
   divider: {
     height: 1,
     backgroundColor: "#e8e8e8",
     marginTop: 2,
     marginBottom: 12,
   },
+  dividerFilled: {
+    backgroundColor: "#22C55E",
+  },
   // Custom dropdown menu styling
   optionsContainer: {
-    backgroundColor: "#F8F9FA",
-    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E5E5E7",
-    marginTop: 6,
-    marginBottom: 8,
+    borderColor: "#ECECEF",
+    marginTop: 8,
+    marginBottom: 10,
     overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
   optionRow: {
-    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 13,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E5E7",
+    borderBottomColor: "#F1F1F3",
+  },
+  optionRowLast: {
+    borderBottomWidth: 0,
+  },
+  optionRowSelected: {
+    backgroundColor: "#F6FBF7",
   },
   optionText: {
-    fontSize: 13,
+    flex: 1,
+    fontSize: 14,
     color: "#555",
     fontWeight: "400",
   },
   optionTextSelected: {
-    color: "#000",
-    fontWeight: "500",
+    color: "#111",
+    fontWeight: "700",
   },
   // Consent row
   consentRow: {

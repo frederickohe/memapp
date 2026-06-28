@@ -22,9 +22,11 @@ import {
   ChevronRight,
   ShieldAlert,
 } from "lucide-react-native";
+import { useRouter } from "expo-router";
 import { scaleFont } from "@/components/scale";
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const [member, setMember] = useState({
     name: "Amanda Boakye",
     branch: "Tesano",
@@ -71,6 +73,42 @@ export default function ProfileScreen() {
           <View style={styles.idBadge}>
             <Text style={styles.idBadgeText}>MEMBER ID: {member.id}</Text>
           </View>
+        </View>
+
+        {/* Affiliation Banner */}
+        <View style={[styles.banner, styles.bannerRed]}>
+          <View style={styles.bannerLeft}>
+            <Text style={styles.bannerTitle}>Affiliation</Text>
+            <Text style={styles.bannerYear}>2026</Text>
+          </View>
+          <View style={styles.statusPill}>
+            <Text style={styles.statusText}>Unpaid</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.viewButton}
+            activeOpacity={0.85}
+            onPress={() => router.push("/affiliation")}
+          >
+            <Text style={styles.viewButtonText}>View</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Dues Banner */}
+        <View style={[styles.banner, styles.bannerGreen]}>
+          <View style={styles.bannerLeft}>
+            <Text style={styles.bannerTitle}>Dues</Text>
+            <Text style={styles.bannerYear}>2026</Text>
+          </View>
+          <View style={styles.statusPill}>
+            <Text style={styles.statusText}>Unpaid</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.viewButton}
+            activeOpacity={0.85}
+            onPress={() => router.push("/affiliation")}
+          >
+            <Text style={styles.viewButtonText}>View</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Member Details Grid */}
@@ -244,6 +282,58 @@ const styles = StyleSheet.create({
     color: "#111",
     marginBottom: 12,
     letterSpacing: 0.2,
+  },
+  banner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  bannerRed: {
+    backgroundColor: "#FF0000",
+  },
+  bannerGreen: {
+    backgroundColor: "#1D3108",
+  },
+  bannerLeft: {
+    flex: 1,
+  },
+  bannerTitle: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  bannerYear: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "400",
+    marginTop: 2,
+    opacity: 0.9,
+  },
+  statusPill: {
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  statusText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  viewButton: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  viewButtonText: {
+    color: "#000000",
+    fontSize: 13,
+    fontWeight: "600",
   },
   infoCard: {
     backgroundColor: "#FFFFFF",
