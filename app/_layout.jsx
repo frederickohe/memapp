@@ -90,6 +90,9 @@ export default function RootLayout() {
         <Stack.Screen name="news" options={{ headerShown: false }} />
         <Stack.Screen name="impact" options={{ headerShown: false }} />
         <Stack.Screen name="connect" options={{ headerShown: false }} />
+        <Stack.Screen name="connect-user" options={{ headerShown: false }} />
+        <Stack.Screen name="connect-list" options={{ headerShown: false }} />
+        <Stack.Screen name="connect-profile" options={{ headerShown: false }} />
         <Stack.Screen name="programs" options={{ headerShown: false }} />
         <Stack.Screen name="surveys" options={{ headerShown: false }} />
         <Stack.Screen name="affiliation" options={{ headerShown: false }} />

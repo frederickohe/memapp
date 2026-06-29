@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   StyleSheet,
   Text,
@@ -6,182 +6,67 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  SafeAreaView,
   StatusBar,
-  Alert,
+  Dimensions,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { ArrowLeft, MessageSquare, Users, Calendar, Plus } from "lucide-react-native";
-import { scaleFont } from "@/components/scale";
 
-export default function ConnectScreen() {
+const { width } = Dimensions.get("window");
+
+const VIDEO_IMAGE =
+  "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80";
+
+export default function ConnectEntranceScreen() {
   const router = useRouter();
-  const [joinedGroups, setJoinedGroups] = useState({});
-  const [connectedUsers, setConnectedUsers] = useState({});
-
-  const groups = [
-    { id: "g1", name: "Fitness Enthusiasts", members: 42, image: "https://picsum.photos/seed/grp1/150/150" },
-    { id: "g2", name: "Volunteer Network", members: 18, image: "https://picsum.photos/seed/grp2/150/150" },
-    { id: "g3", name: "Youth Sports Parents", members: 31, image: "https://picsum.photos/seed/grp3/150/150" },
-    { id: "g4", name: "Senior Wellness Circle", members: 25, image: "https://picsum.photos/seed/grp4/150/150" },
-  ];
-
-  const meetups = [
-    {
-      id: "m1",
-      title: "Community Saturday Breakfast",
-      date: "Saturday, June 27",
-      time: "8:00 AM - 10:00 AM",
-      location: "Main Dining Hall",
-    },
-    {
-      id: "m2",
-      title: "Member Networking Night",
-      date: "Friday, July 03",
-      time: "6:00 PM - 8:00 PM",
-      location: "YMCA Lounge",
-    },
-  ];
-
-  const users = [
-    { id: "u1", name: "Kofi Mensah", avatar: "https://randomuser.me/api/portraits/men/32.jpg", role: "Fitness Member" },
-    { id: "u2", name: "Akua Osei", avatar: "https://randomuser.me/api/portraits/women/12.jpg", role: "Volunteer Lead" },
-    { id: "u3", name: "John Doe", avatar: "https://randomuser.me/api/portraits/men/85.jpg", role: "Youth Coach" },
-    { id: "u4", name: "Jane Smith", avatar: "https://randomuser.me/api/portraits/women/45.jpg", role: "Yoga Instructor" },
-  ];
-
-  const toggleJoinGroup = (id, name) => {
-    setJoinedGroups(prev => {
-      const updated = { ...prev, [id]: !prev[id] };
-      const isJoining = updated[id];
-      Alert.alert("Group Update", isJoining ? `You successfully joined "${name}"!` : `You left "${name}".`);
-      return updated;
-    });
-  };
-
-  const toggleConnectUser = (id, name) => {
-    setConnectedUsers(prev => {
-      const updated = { ...prev, [id]: !prev[id] };
-      const isConnecting = updated[id];
-      Alert.alert("Connection Update", isConnecting ? `Connection request sent to ${name}!` : `Cancelled request to ${name}.`);
-      return updated;
-    });
-  };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <StatusBar barStyle="dark-content" />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <ArrowLeft size={24} color="#111" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Connect</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* Discussion Groups Section */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Discussion Groups</Text>
-          <TouchableOpacity activeOpacity={0.7}>
-            <Text style={styles.seeAllText}>See All</Text>
-          </TouchableOpacity>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Video Container (same treatment as onboarding) */}
+        <View style={styles.videoWrap}>
+          <View style={styles.videoContainer}>
+            <Image source={{ uri: VIDEO_IMAGE }} style={styles.videoImage} />
+            <View style={styles.videoOverlay} />
+            {/* Play button */}
+            <View style={styles.playButton}>
+              <View style={styles.playTriangle} />
+            </View>
+            {/* Bottom scrubber bar */}
+            <View style={styles.videoControls}>
+              <View style={styles.scrubberFilled} />
+              <View style={styles.scrubberEmpty} />
+            </View>
+          </View>
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.groupsScroll}
-        >
-          {groups.map((group) => (
-            <View key={group.id} style={styles.groupCard}>
-              <Image source={{ uri: group.image }} style={styles.groupImage} />
-              <Text style={styles.groupName} numberOfLines={1}>
-                {group.name}
-              </Text>
-              <Text style={styles.groupMembers}>{group.members} Members</Text>
-              <TouchableOpacity
-                style={[
-                  styles.groupButton,
-                  joinedGroups[group.id] && styles.groupButtonActive,
-                ]}
-                onPress={() => toggleJoinGroup(group.id, group.name)}
-                activeOpacity={0.8}
-              >
-                <Text
-                  style={[
-                    styles.groupButtonText,
-                    joinedGroups[group.id] && styles.groupButtonTextActive,
-                  ]}
-                >
-                  {joinedGroups[group.id] ? "Joined" : "Join"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-        </ScrollView>
-
-        {/* Upcoming Meetups Section */}
-        <Text style={styles.sectionTitle}>Upcoming Meetups</Text>
-        {meetups.map((meetup) => (
-          <View key={meetup.id} style={styles.meetupCard}>
-            <View style={styles.meetupHeader}>
-              <Calendar size={18} color="#FF3B30" style={{ marginRight: 8 }} />
-              <Text style={styles.meetupDate}>{meetup.date}</Text>
-            </View>
-            <Text style={styles.meetupTitle}>{meetup.title}</Text>
-            <Text style={styles.meetupDetail}>⏰ {meetup.time}</Text>
-            <Text style={styles.meetupDetail}>📍 {meetup.location}</Text>
-            
-            <TouchableOpacity
-              style={styles.rsvpButton}
-              onPress={() => Alert.alert("RSVP Confirmed", `Thank you for RSVPing for the "${meetup.title}"!`)}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.rsvpButtonText}>RSVP Now</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
-
-        {/* Active Members Section */}
-        <Text style={styles.sectionTitle}>Featured Members</Text>
-        <View style={styles.membersContainer}>
-          {users.map((item) => (
-            <View key={item.id} style={styles.memberCard}>
-              <View style={styles.memberLeft}>
-                <Image source={{ uri: item.avatar }} style={styles.memberAvatar} />
-                <View style={styles.memberInfo}>
-                  <Text style={styles.memberName}>{item.name}</Text>
-                  <Text style={styles.memberRole}>{item.role}</Text>
-                </View>
-              </View>
-              <TouchableOpacity
-                style={[
-                  styles.connectButton,
-                  connectedUsers[item.id] && styles.connectButtonActive,
-                ]}
-                onPress={() => toggleConnectUser(item.id, item.name)}
-                activeOpacity={0.8}
-              >
-                <Text
-                  style={[
-                    styles.connectButtonText,
-                    connectedUsers[item.id] && styles.connectButtonTextActive,
-                  ]}
-                >
-                  {connectedUsers[item.id] ? "Pending" : "Connect"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ))}
+        {/* Content */}
+        <View style={styles.content}>
+          <Text style={styles.title}>Lorem ipsum dolor sit amet, consectetur</Text>
+          <Text style={styles.body}>
+            • adipiscing elit. Lobortis cras placerat diam ipsum ut. Nisi vel
+            adipiscing massa bibendum diam. Suspendisse mattis dui maecenas duis
+            mattis. Mattis aliquam at arcu, semper nunc, venenatis et
+            pellentesque eu. Id tristique maecenas tristique habitasse eu
+          </Text>
         </View>
       </ScrollView>
+
+      {/* Connect Button */}
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={styles.connectButton}
+          activeOpacity={0.9}
+          onPress={() => router.push("/connect-user")}
+        >
+          <Text style={styles.connectButtonText}>Connect</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -191,200 +76,118 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
+  scroll: {
+    flexGrow: 1,
+    paddingTop: 12,
   },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "500",
-    color: "#111",
-  },
-  scrollContent: {
+  videoWrap: {
     paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 30,
+    marginTop: "6%",
   },
-  sectionHeader: {
+  videoContainer: {
+    width: "100%",
+    height: 180,
+    borderRadius: 16,
+    backgroundColor: "#1a1a1a",
+    overflow: "hidden",
+    position: "relative",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  videoImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%",
+    height: "100%",
+  },
+  videoOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.25)",
+  },
+  playButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(0,200,80,0.92)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  playTriangle: {
+    width: 0,
+    height: 0,
+    borderStyle: "solid",
+    borderTopWidth: 9,
+    borderBottomWidth: 9,
+    borderLeftWidth: 16,
+    borderTopColor: "transparent",
+    borderBottomColor: "transparent",
+    borderLeftColor: "#fff",
+    marginLeft: 4,
+  },
+  videoControls: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 30,
     flexDirection: "row",
-    justifyContent: "space-between",
+    backgroundColor: "rgba(0,0,0,0.65)",
+    paddingHorizontal: 12,
     alignItems: "center",
-    marginBottom: 14,
+    gap: 8,
   },
-  sectionTitle: {
+  scrubberFilled: {
+    width: 55,
+    height: 3,
+    backgroundColor: "#4CAF50",
+    borderRadius: 2,
+  },
+  scrubberEmpty: {
+    flex: 1,
+    height: 3,
+    backgroundColor: "rgba(255,255,255,0.25)",
+    borderRadius: 2,
+  },
+  content: {
+    paddingHorizontal: 28,
+    paddingTop: 26,
+    paddingBottom: 16,
+    alignItems: "center",
+  },
+  title: {
     fontSize: 16,
-    fontWeight: "400",
-    color: "#111",
-    marginBottom: 14,
-    letterSpacing: 0.2,
-  },
-  seeAllText: {
-    fontSize: 13,
-    color: "#FF3B30",
-    fontWeight: "400",
-  },
-  groupsScroll: {
-    paddingBottom: 20,
-  },
-  groupCard: {
-    width: 140,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#F0F0F0",
-    padding: 12,
-    alignItems: "center",
-    marginRight: 14,
-  },
-  groupImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#F5F5F7",
-    marginBottom: 10,
-  },
-  groupName: {
-    fontSize: 13,
-    fontWeight: "500",
+    fontWeight: "600",
     color: "#111",
     textAlign: "center",
-    marginBottom: 4,
-    width: "100%",
+    marginBottom: 14,
+    lineHeight: 22,
   },
-  groupMembers: {
-    fontSize: 10,
-    color: "#666",
-    fontWeight: "500",
-    marginBottom: 12,
-  },
-  groupButton: {
-    backgroundColor: "#000000",
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    width: "100%",
-    alignItems: "center",
-  },
-  groupButtonActive: {
-    backgroundColor: "#F5F5F7",
-    borderWidth: 1,
-    borderColor: "#E5E5E7",
-  },
-  groupButtonText: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "400",
-  },
-  groupButtonTextActive: {
-    color: "#666",
-  },
-  meetupCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#F0F0F0",
-    padding: 16,
-    marginBottom: 20,
-  },
-  meetupHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  meetupDate: {
-    fontSize: 11,
-    fontWeight: "500",
-    color: "#FF3B30",
-  },
-  meetupTitle: {
-    fontSize: 15,
-    fontWeight: "500",
-    color: "#111",
-    marginBottom: 8,
-  },
-  meetupDetail: {
-    fontSize: 12,
-    color: "#555",
-    fontWeight: "400",
-    marginBottom: 4,
-  },
-  rsvpButton: {
-    backgroundColor: "#F5F5F7",
-    borderRadius: 12,
-    paddingVertical: 10,
-    alignItems: "center",
-    marginTop: 12,
-  },
-  rsvpButtonText: {
-    color: "#111",
-    fontSize: 12,
-    fontWeight: "400",
-  },
-  membersContainer: {
-    width: "100%",
-  },
-  memberCard: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#F0F0F0",
-    padding: 12,
-    marginBottom: 12,
-  },
-  memberLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  memberAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#F5F5F7",
-  },
-  memberInfo: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  memberName: {
+  body: {
     fontSize: 13,
-    fontWeight: "500",
-    color: "#111",
-  },
-  memberRole: {
-    fontSize: 11,
     color: "#666",
-    fontWeight: "400",
-    marginTop: 1,
+    lineHeight: 21,
+    textAlign: "center",
+  },
+  footer: {
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+    paddingTop: 10,
+    backgroundColor: "#fff",
   },
   connectButton: {
-    backgroundColor: "#000000",
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-  },
-  connectButtonActive: {
-    backgroundColor: "#F5F5F7",
-    borderWidth: 1,
-    borderColor: "#E5E5E7",
+    backgroundColor: "#111",
+    borderRadius: 28,
+    paddingVertical: 15,
+    alignItems: "center",
   },
   connectButtonText: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "400",
-  },
-  connectButtonTextActive: {
-    color: "#666",
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "500",
   },
 });
