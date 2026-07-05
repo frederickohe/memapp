@@ -88,6 +88,8 @@ export default function RootLayout() {
         <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="news" options={{ headerShown: false }} />
+        <Stack.Screen name="volunteer" options={{ headerShown: false }} />
+        <Stack.Screen name="notifications" options={{ headerShown: false }} />
         <Stack.Screen name="impact" options={{ headerShown: false }} />
         <Stack.Screen name="connect" options={{ headerShown: false }} />
         <Stack.Screen name="connect-user" options={{ headerShown: false }} />

@@ -103,7 +103,7 @@ export default function CustomTabBar({ state, descriptors, navigation }) {
     <View
       style={[
         styles.wrap,
-        { paddingBottom: insets.bottom ? insets.bottom : 8 },
+        { paddingBottom: insets.bottom ? Math.max(insets.bottom - 12, 4) : 4 },
       ]}
     >
       <View style={styles.pill}>
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
   wrap: {
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 12,
-    paddingTop: 6,
+    paddingTop: 4,
   },
   pill: {
     flexDirection: "row",

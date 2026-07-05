@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -8,6 +8,9 @@ import {
   Image,
   ImageBackground,
   StatusBar,
+  Animated,
+  Easing,
+  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -18,8 +21,63 @@ const DARK = "#1D3108";
 const SUBTLE = "#4B5563";
 const CARD_BG = "#F7F8FC";
 
+const { width: SCREEN_W } = Dimensions.get("window");
+// Points card inner width: screen padding (16*2) + card padding (16*2).
+const CARD_INNER_W = SCREEN_W - 32 - 32;
+const PROGRESS_RATIO = 0.61;
+const FILL_W = CARD_INNER_W * PROGRESS_RATIO;
+const GLARE_W = 90;
+
+const GREETING_H = 34;
+
 export default function HomeScreen() {
   const router = useRouter();
+
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const shimmer = useRef(new Animated.Value(0)).current;
+
+  // Looping glare that sweeps across the progress fill.
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmer, {
+          toValue: 1,
+          duration: 1400,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.delay(900),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [shimmer]);
+
+  const greetingHeight = scrollY.interpolate({
+    inputRange: [0, 50],
+    outputRange: [GREETING_H, 0],
+    extrapolate: "clamp",
+  });
+  const greetingOpacity = scrollY.interpolate({
+    inputRange: [0, 38],
+    outputRange: [1, 0],
+    extrapolate: "clamp",
+  });
+  const greetingTranslate = scrollY.interpolate({
+    inputRange: [0, 50],
+    outputRange: [0, -8],
+    extrapolate: "clamp",
+  });
+  const hairlineOpacity = scrollY.interpolate({
+    inputRange: [0, 50],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
+
+  const glareTranslate = shimmer.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-GLARE_W, FILL_W],
+  });
 
   const impactStories = [
     {
@@ -43,11 +101,11 @@ export default function HomeScreen() {
   ];
 
   const prominentProfiles = [
-    { id: "chatime", name: "Chatime", logo: "https://images.unsplash.com/photo-1558857563-b371033873b8?auto=format&fit=crop&w=200&q=80" },
-    { id: "informa", name: "Informa", logo: "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&w=200&q=80" },
-    { id: "zara", name: "Zara", logo: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=200&q=80" },
-    { id: "hm", name: "H&M", logo: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=200&q=80" },
-    { id: "starbucks", name: "Starbucks", logo: "https://images.unsplash.com/photo-1442512595331-e89e73853f31?auto=format&fit=crop&w=200&q=80" },
+    { id: "chatime", name: "Chatime", logo: require("@/assets/logos/chatime.png") },
+    { id: "informa", name: "Informa", logo: require("@/assets/logos/informa.png") },
+    { id: "zara", name: "Zara", logo: require("@/assets/logos/zara.png") },
+    { id: "hm", name: "H&M", logo: require("@/assets/logos/hm.png") },
+    { id: "starbucks", name: "Starbucks", logo: require("@/assets/logos/starbucks.png") },
   ];
 
   const categories = [
@@ -117,25 +175,50 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <StatusBar barStyle="dark-content" />
 
-      {/* Header */}
+      {/* Collapsing Header */}
       <View style={styles.header}>
-        <View style={styles.locationRow}>
-          <MapPin size={18} color={DARK} fill={DARK} />
-          <Text style={styles.locationText}>Koforidua Branch</Text>
-        </View>
-        <TouchableOpacity style={styles.bellButton} activeOpacity={0.7}>
-          <Bell size={24} color="#111" strokeWidth={2} fill="#111" />
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>1</Text>
+        <View style={styles.headerTopRow}>
+          <View style={styles.locationRow}>
+            <MapPin size={18} color={DARK} fill={DARK} />
+            <Text style={styles.locationText}>Koforidua Branch</Text>
           </View>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.bellButton}
+            activeOpacity={0.7}
+            onPress={() => router.push("/notifications")}
+          >
+            <Bell size={24} color="#111" strokeWidth={2} fill="#111" />
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>1</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        <Animated.View
+          style={[
+            styles.greetingWrap,
+            {
+              height: greetingHeight,
+              opacity: greetingOpacity,
+              transform: [{ translateY: greetingTranslate }],
+            },
+          ]}
+        >
+          <Text style={styles.greeting}>Hello, Micheal 👋</Text>
+        </Animated.View>
+
+        <Animated.View style={[styles.headerHairline, { opacity: hairlineOpacity }]} />
       </View>
-      <Text style={styles.greeting}>Hello, Micheal 👋</Text>
 
       {/* Scrollable Content */}
-      <ScrollView
+      <Animated.ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        scrollEventThrottle={16}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
       >
         {/* Points / Rewards Card */}
         <View style={styles.pointsCard}>
@@ -159,7 +242,25 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.progressTrack}>
-            <View style={styles.progressFill} />
+            <View style={styles.progressFill}>
+              <Animated.View
+                style={[
+                  styles.glare,
+                  { transform: [{ translateX: glareTranslate }, { skewX: "-20deg" }] },
+                ]}
+              >
+                <LinearGradient
+                  colors={[
+                    "rgba(255,255,255,0)",
+                    "rgba(255,255,255,0.65)",
+                    "rgba(255,255,255,0)",
+                  ]}
+                  start={{ x: 0, y: 0.5 }}
+                  end={{ x: 1, y: 0.5 }}
+                  style={StyleSheet.absoluteFill}
+                />
+              </Animated.View>
+            </View>
           </View>
           <Text style={styles.pointsToNext}>4,760 pts to Platinum</Text>
 
@@ -210,9 +311,9 @@ export default function HomeScreen() {
             <View key={brand.id} style={styles.profileItem}>
               <View style={styles.logoBox}>
                 <Image
-                  source={{ uri: brand.logo }}
+                  source={brand.logo}
                   style={styles.logoImage}
-                  resizeMode="cover"
+                  resizeMode="contain"
                 />
               </View>
               <Text style={styles.profileName}>{brand.name}</Text>
@@ -265,7 +366,7 @@ export default function HomeScreen() {
         >
           {promotions.map(renderStoryCard)}
         </ScrollView>
-      </ScrollView>
+      </Animated.ScrollView>
     </SafeAreaView>
   );
 }
@@ -276,11 +377,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   header: {
+    paddingTop: 8,
+    backgroundColor: "#FFFFFF",
+  },
+  headerTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingTop: 8,
   },
   locationRow: {
     flexDirection: "row",
@@ -317,17 +421,25 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "700",
   },
+  greetingWrap: {
+    justifyContent: "flex-end",
+    overflow: "hidden",
+    paddingHorizontal: 16,
+    paddingBottom: 6,
+  },
   greeting: {
     fontSize: 15,
     color: "#000",
     fontWeight: "500",
-    paddingHorizontal: 16,
-    marginTop: 8,
+  },
+  headerHairline: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "#E5E7EB",
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 120,
+    paddingTop: 14,
+    paddingBottom: 110,
   },
   pointsCard: {
     backgroundColor: CARD_BG,
@@ -386,10 +498,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   progressFill: {
-    width: "61%",
+    width: `${PROGRESS_RATIO * 100}%`,
     height: "100%",
     borderRadius: 24,
     backgroundColor: "#FF0000",
+    overflow: "hidden",
+  },
+  glare: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    width: GLARE_W,
   },
   pointsToNext: {
     fontSize: 12,
@@ -473,10 +593,13 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: CARD_BG,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#EEF0F4",
     justifyContent: "center",
     alignItems: "center",
     overflow: "hidden",
+    padding: 12,
   },
   logoImage: {
     width: "100%",

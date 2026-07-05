@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -8,6 +8,15 @@ import {
   StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import Svg, { Circle } from "react-native-svg";
+import Reanimated, {
+  useSharedValue,
+  useAnimatedProps,
+  withTiming,
+  withDelay,
+  Easing,
+} from "react-native-reanimated";
 import {
   MoreVertical,
   Flame,
@@ -16,6 +25,15 @@ import {
   Lock,
   DollarSign,
 } from "lucide-react-native";
+
+// Rank progress ring geometry (draws on first load).
+const RANK_RING_SIZE = 192;
+const RANK_RING_STROKE = 12;
+const RANK_RING_R = (RANK_RING_SIZE - RANK_RING_STROKE) / 2;
+const RANK_RING_C = 2 * Math.PI * RANK_RING_R;
+const RANK_PROGRESS = 0.83;
+
+const AnimatedCircle = Reanimated.createAnimatedComponent(Circle);
 
 const COLORS = {
   bg: "#FFFFFF",
@@ -38,9 +56,9 @@ function StatCard({ icon, label, value, active }) {
   );
 }
 
-function MilestoneBadge({ tierColor, label, locked }) {
-  return (
-    <View style={styles.badgeItem}>
+function MilestoneBadge({ tierColor, label, locked, onPress }) {
+  const content = (
+    <>
       <View
         style={[
           styles.badgeCircle,
@@ -58,8 +76,18 @@ function MilestoneBadge({ tierColor, label, locked }) {
       <Text style={[styles.badgeLabel, locked && styles.badgeLabelLocked]}>
         {label}
       </Text>
-    </View>
+    </>
   );
+
+  if (onPress) {
+    return (
+      <TouchableOpacity style={styles.badgeItem} activeOpacity={0.8} onPress={onPress}>
+        {content}
+      </TouchableOpacity>
+    );
+  }
+
+  return <View style={styles.badgeItem}>{content}</View>;
 }
 
 function DuesBadge({ label, locked, active }) {
@@ -88,7 +116,24 @@ function DuesBadge({ label, locked, active }) {
 }
 
 export default function AchievementsScreen() {
+  const router = useRouter();
   const progress = 0.83;
+
+  // Draw the red rank ring on first load.
+  const ringProgress = useSharedValue(0);
+  useEffect(() => {
+    ringProgress.value = withDelay(
+      200,
+      withTiming(RANK_PROGRESS, {
+        duration: 1500,
+        easing: Easing.out(Easing.cubic),
+      })
+    );
+  }, []);
+
+  const rankRingProps = useAnimatedProps(() => ({
+    strokeDashoffset: RANK_RING_C * (1 - ringProgress.value),
+  }));
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -109,13 +154,34 @@ export default function AchievementsScreen() {
         {/* Rank Section */}
         <View style={styles.rankSection}>
           <View style={styles.ringWrapper}>
-            <View style={styles.ringTrack} />
-            <View
-              style={[
-                styles.ringProgress,
-                { transform: [{ rotate: "45deg" }] },
-              ]}
-            />
+            <Svg
+              width={RANK_RING_SIZE}
+              height={RANK_RING_SIZE}
+              style={StyleSheet.absoluteFill}
+            >
+              <Circle
+                cx={RANK_RING_SIZE / 2}
+                cy={RANK_RING_SIZE / 2}
+                r={RANK_RING_R}
+                stroke={COLORS.track}
+                strokeWidth={RANK_RING_STROKE}
+                fill="none"
+              />
+              <AnimatedCircle
+                cx={RANK_RING_SIZE / 2}
+                cy={RANK_RING_SIZE / 2}
+                r={RANK_RING_R}
+                stroke={COLORS.red}
+                strokeWidth={RANK_RING_STROKE}
+                fill="none"
+                strokeLinecap="round"
+                strokeDasharray={RANK_RING_C}
+                animatedProps={rankRingProps}
+                originX={RANK_RING_SIZE / 2}
+                originY={RANK_RING_SIZE / 2}
+                rotation={-90}
+              />
+            </Svg>
             <View style={styles.ringCenter}>
               <Text style={styles.rankLabel}>RANK</Text>
               <Text style={styles.rankNumber}>#3</Text>
@@ -156,7 +222,11 @@ export default function AchievementsScreen() {
           <View style={styles.badgeGrid}>
             <MilestoneBadge tierColor="#CD7F32" label="First Step" />
             <MilestoneBadge tierColor="#9CA3AF" label="Helper" />
-            <MilestoneBadge tierColor="#F59E0B" label="Champion" />
+            <MilestoneBadge
+              tierColor="#F59E0B"
+              label="Champion"
+              onPress={() => router.push("/volunteer")}
+            />
             <MilestoneBadge label="Leader" locked />
             <MilestoneBadge label="Legend" locked />
           </View>
@@ -243,25 +313,6 @@ const styles = StyleSheet.create({
     height: 192,
     alignItems: "center",
     justifyContent: "center",
-  },
-  ringTrack: {
-    position: "absolute",
-    width: 192,
-    height: 192,
-    borderRadius: 96,
-    borderWidth: 12,
-    borderColor: COLORS.track,
-  },
-  ringProgress: {
-    position: "absolute",
-    width: 192,
-    height: 192,
-    borderRadius: 96,
-    borderWidth: 12,
-    borderColor: "transparent",
-    borderTopColor: COLORS.red,
-    borderRightColor: COLORS.red,
-    borderLeftColor: COLORS.red,
   },
   ringCenter: {
     alignItems: "center",
