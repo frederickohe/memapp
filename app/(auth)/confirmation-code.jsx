@@ -1,6 +1,7 @@
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState, useRef } from "react";
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -11,11 +12,23 @@ import {
   View,
 } from "react-native";
 
-import { SafeAreaView } from "react-native-safe-area-context"
+import { SafeAreaView } from "react-native-safe-area-context";
+import { getPostAuthRoute, useAuthStore } from "@/stores/useAuthStore";
+
+const OTP_LENGTH = 5;
 
 export default function ConfirmationCodeScreen() {
   const router = useRouter();
-  const [code, setCode] = useState(["", "", "", ""]);
+  const { intent: intentParam } = useLocalSearchParams();
+  const intent = Array.isArray(intentParam) ? intentParam[0] : intentParam ?? "signup";
+  const phone = useAuthStore((state) => state.phone);
+  const email = useAuthStore((state) => state.email);
+  const verifyOtpCode = useAuthStore((state) => state.verifyOtpCode);
+  const sendOtp = useAuthStore((state) => state.sendOtp);
+  const isLoading = useAuthStore((state) => state.isLoading);
+  const error = useAuthStore((state) => state.error);
+  const clearError = useAuthStore((state) => state.clearError);
+  const [code, setCode] = useState(Array(OTP_LENGTH).fill(""));
   const inputRefs = useRef([]);
 
   const handleCodeChange = (index, value) => {
@@ -24,8 +37,7 @@ export default function ConfirmationCodeScreen() {
     newCode[index] = cleanValue;
     setCode(newCode);
 
-    // Auto move to next input if a digit is entered
-    if (cleanValue && index < 3) {
+    if (cleanValue && index < OTP_LENGTH - 1) {
       inputRefs.current[index + 1]?.focus();
     }
   };
@@ -33,7 +45,6 @@ export default function ConfirmationCodeScreen() {
   const handleKeyPress = (index, event) => {
     if (event.nativeEvent.key === "Backspace") {
       if (!code[index] && index > 0) {
-        // If current field is empty, clear the previous field and focus it
         const newCode = [...code];
         newCode[index - 1] = "";
         setCode(newCode);
@@ -42,12 +53,20 @@ export default function ConfirmationCodeScreen() {
     }
   };
 
-  const handleConfirmation = () => {
+  const handleConfirmation = async () => {
     const fullCode = code.join("");
-    if (fullCode.length === 4) {
-      // Navigate to main app
-      router.replace("/(onboarding)/welcome");
+    if (fullCode.length !== OTP_LENGTH) return;
+
+    clearError();
+    const result = await verifyOtpCode(fullCode);
+    if (result.success) {
+      router.replace(getPostAuthRoute(intent));
     }
+  };
+
+  const handleResend = async () => {
+    clearError();
+    await sendOtp({ phone, email });
   };
 
   const isCodeComplete = code.every((digit) => digit !== "");
@@ -69,13 +88,6 @@ export default function ConfirmationCodeScreen() {
             <View>
               <Text style={styles.title}>Confirmation Code</Text>
 
-              <View style={styles.phoneDisplay}>
-                <Text style={styles.phone}>+1 000 99 972 32 26</Text>
-                <TouchableOpacity>
-                  <Text style={styles.editIcon}>✏️</Text>
-                </TouchableOpacity>
-              </View>
-
               <View style={styles.codeInputContainer}>
                 {code.map((digit, index) => (
                   <TextInput
@@ -93,9 +105,11 @@ export default function ConfirmationCodeScreen() {
                 ))}
               </View>
 
+              {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
               <View style={styles.resendContainer}>
                 <Text style={styles.resendText}>Didn't receive a code? </Text>
-                <TouchableOpacity>
+                <TouchableOpacity onPress={handleResend} disabled={isLoading}>
                   <Text style={styles.resendLink}>Resend</Text>
                 </TouchableOpacity>
               </View>
@@ -104,12 +118,16 @@ export default function ConfirmationCodeScreen() {
             <TouchableOpacity
               style={[
                 styles.confirmButton,
-                !isCodeComplete && styles.confirmButtonDisabled,
+                (!isCodeComplete || isLoading) && styles.confirmButtonDisabled,
               ]}
               onPress={handleConfirmation}
-              disabled={!isCodeComplete}
+              disabled={!isCodeComplete || isLoading}
             >
-              <Text style={styles.confirmButtonText}>Confirmation</Text>
+              {isLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.confirmButtonText}>Confirmation</Text>
+              )}
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -148,30 +166,12 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "400",
     color: "#000",
-    marginBottom: 24,
-  },
-  phoneDisplay: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
     marginBottom: 32,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    backgroundColor: "#f9f9f9",
-    borderRadius: 12,
-  },
-  phone: {
-    fontSize: 14,
-    color: "#333",
-    fontWeight: "500",
-  },
-  editIcon: {
-    fontSize: 18,
   },
   codeInputContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    gap: 12,
+    gap: 8,
     marginBottom: 24,
   },
   codeInput: {
@@ -184,6 +184,12 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     textAlign: "center",
     backgroundColor: "#f9f9f9",
+  },
+  errorText: {
+    fontSize: 13,
+    color: "#c62828",
+    textAlign: "center",
+    marginBottom: 12,
   },
   resendContainer: {
     flexDirection: "row",

@@ -9,7 +9,7 @@ export default function TabLayout() {
       tabBar={(props) => <CustomTabBar {...props} />}
     >
       <Tabs.Screen name="index" options={{ title: "Home" }} />
-      <Tabs.Screen name="achievements" options={{ title: "Achievements" }} />
+      <Tabs.Screen name="achievements" options={{ title: "Volunteer" }} />
       <Tabs.Screen name="profile" options={{ title: "Profile" }} />
     </Tabs>
   );

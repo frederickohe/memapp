@@ -1,6 +1,7 @@
-import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -11,18 +12,38 @@ import {
   View,
 } from "react-native";
 
-import { SafeAreaView } from "react-native-safe-area-context"
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 export default function PhoneNumberScreen() {
   const router = useRouter();
+  const { intent: intentParam } = useLocalSearchParams();
+  const intent = Array.isArray(intentParam) ? intentParam[0] : intentParam ?? "signup";
+  const sendOtp = useAuthStore((state) => state.sendOtp);
+  const setAuthIntent = useAuthStore((state) => state.setAuthIntent);
+  const isLoading = useAuthStore((state) => state.isLoading);
+  const error = useAuthStore((state) => state.error);
+  const clearError = useAuthStore((state) => state.clearError);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
 
-  const handleGetCode = () => {
-    if (phoneNumber || email) {
-      router.push("/(auth)/confirmation-code");
+  useEffect(() => {
+    setAuthIntent(intent);
+  }, [intent, setAuthIntent]);
+
+  const handleGetCode = async () => {
+    const phone = phoneNumber.trim();
+    const emailValue = email.trim();
+    if (!phone && !emailValue) return;
+
+    clearError();
+    const result = await sendOtp({ phone, email: emailValue });
+    if (result.success) {
+      router.push(`/(auth)/confirmation-code?intent=${intent}`);
     }
   };
+
+  const canSubmit = Boolean((phoneNumber.trim() || email.trim()) && !isLoading);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -47,13 +68,9 @@ export default function PhoneNumberScreen() {
               <View style={styles.form}>
                 <View style={styles.formGroup}>
                   <Text style={styles.label}>Phone number</Text>
-                  <View style={styles.phoneInputContainer}>
-                    <View style={styles.countryCode}>
-                      <Text style={styles.flag}>🇮🇳</Text>
-                      <Text style={styles.code}>+1 000 99 971</Text>
-                    </View>
+                  <View style={styles.inputContainer}>
                     <TextInput
-                      style={styles.phoneInput}
+                      style={styles.input}
                       placeholder="Phone number"
                       placeholderTextColor="#ccc"
                       keyboardType="phone-pad"
@@ -78,19 +95,28 @@ export default function PhoneNumberScreen() {
                       placeholder="Email"
                       placeholderTextColor="#ccc"
                       keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoCorrect={false}
                       value={email}
                       onChangeText={setEmail}
                     />
                   </View>
                 </View>
+
+                {error ? <Text style={styles.errorText}>{error}</Text> : null}
               </View>
             </View>
 
             <TouchableOpacity
-              style={styles.getCodeButton}
+              style={[styles.getCodeButton, !canSubmit && styles.getCodeButtonDisabled]}
               onPress={handleGetCode}
+              disabled={!canSubmit}
             >
-              <Text style={styles.getCodeButtonText}>Get Code</Text>
+              {isLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.getCodeButtonText}>Get Code</Text>
+              )}
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -147,35 +173,6 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#333",
   },
-  phoneInputContainer: {
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-    borderRadius: 12,
-    backgroundColor: "#f9f9f9",
-    overflow: "hidden",
-  },
-  countryCode: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-    gap: 8,
-  },
-  flag: {
-    fontSize: 20,
-  },
-  code: {
-    fontSize: 14,
-    color: "#666",
-  },
-  phoneInput: {
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: "#000",
-  },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -194,6 +191,10 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     color: "#000",
+  },
+  errorText: {
+    fontSize: 13,
+    color: "#c62828",
   },
   divider: {
     flexDirection: "row",
@@ -216,6 +217,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: "center",
     marginTop: 24,
+  },
+  getCodeButtonDisabled: {
+    backgroundColor: "#ccc",
   },
   getCodeButtonText: {
     fontSize: 16,

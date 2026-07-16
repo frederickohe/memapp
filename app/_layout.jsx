@@ -1,4 +1,4 @@
-import { Stack, useRouter } from "expo-router";
+import { Stack } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import "react-native-reanimated";
 import { LATO_FONTS, applyGlobalLatoFont } from "@/components/latoFont";
+import { useAuthBootstrap } from "@/hooks/useAuthBootstrap";
 
 // Make Lato the app-wide default font for every Text / TextInput.
 applyGlobalLatoFont();
@@ -43,6 +44,8 @@ export default function RootLayout() {
   const [splashVisible, setSplashVisible] = useState(true);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const panAnim = useRef(new Animated.Value(0)).current;
+
+  useAuthBootstrap(fontsLoaded);
 
   useEffect(() => {
     if (!fontsLoaded) return;
@@ -129,9 +132,6 @@ export default function RootLayout() {
           <View style={styles.splashTextWrapper}>
             <Text style={styles.splashWelcome}>Welcome to</Text>
             <Text style={styles.splashTitle}>YMCA Ghana</Text>
-            <Text style={styles.splashSubtitle}>
-              National Youth Conference
-            </Text>
           </View>
         </Animated.View>
       )}

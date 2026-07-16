@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -16,6 +16,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { Bell, ChevronRight, Star, MapPin, Crown } from "lucide-react-native";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { mapAuthToProfile } from "@/lib/userProfile";
 
 const DARK = "#1D3108";
 const SUBTLE = "#4B5563";
@@ -32,6 +34,22 @@ const GREETING_H = 34;
 
 export default function HomeScreen() {
   const router = useRouter();
+  const fetchProfile = useAuthStore((state) => state.fetchProfile);
+  const user = useAuthStore((state) => state.user);
+  const phone = useAuthStore((state) => state.phone);
+  const email = useAuthStore((state) => state.email);
+
+  const profile = useMemo(
+    () => mapAuthToProfile({ user, phone, email }),
+    [user, phone, email]
+  );
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
+
+  const branchLabel =
+    profile.branch === "—" ? "Your Branch" : `${profile.branch} Branch`;
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const shimmer = useRef(new Animated.Value(0)).current;
@@ -180,7 +198,7 @@ export default function HomeScreen() {
         <View style={styles.headerTopRow}>
           <View style={styles.locationRow}>
             <MapPin size={18} color={DARK} fill={DARK} />
-            <Text style={styles.locationText}>Koforidua Branch</Text>
+            <Text style={styles.locationText}>{branchLabel}</Text>
           </View>
           <TouchableOpacity
             style={styles.bellButton}
@@ -204,7 +222,7 @@ export default function HomeScreen() {
             },
           ]}
         >
-          <Text style={styles.greeting}>Hello, Micheal 👋</Text>
+          <Text style={styles.greeting}>Hello, {profile.firstName} </Text>
         </Animated.View>
 
         <Animated.View style={[styles.headerHairline, { opacity: hairlineOpacity }]} />
@@ -439,7 +457,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 14,
-    paddingBottom: 110,
+    paddingBottom: 20,
   },
   pointsCard: {
     backgroundColor: CARD_BG,

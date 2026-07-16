@@ -1,6 +1,7 @@
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -11,19 +12,31 @@ import {
   View,
 } from "react-native";
 
-import { SafeAreaView } from "react-native-safe-area-context"
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [username, setUsername] = useState("");
+  const { intent = "login" } = useLocalSearchParams();
+  const signIn = useAuthStore((state) => state.signIn);
+  const isLoading = useAuthStore((state) => state.isLoading);
+  const error = useAuthStore((state) => state.error);
+  const clearError = useAuthStore((state) => state.clearError);
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = () => {
-    if (username && password) {
-      router.push("/(auth)/phone-number");
+  const handleLogin = async () => {
+    if (!email.trim() || !password) return;
+
+    clearError();
+    const result = await signIn(email.trim(), password);
+    if (result.success) {
+      router.replace("/(tabs)");
     }
   };
+
+  const canSubmit = Boolean(email.trim() && password && !isLoading);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -46,14 +59,17 @@ export default function LoginScreen() {
 
             <View style={styles.form}>
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Username</Text>
+                <Text style={styles.label}>Email</Text>
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    placeholder="Enter your username"
+                    placeholder="Enter your email"
                     placeholderTextColor="#ccc"
-                    value={username}
-                    onChangeText={setUsername}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    value={email}
+                    onChangeText={setEmail}
                   />
                 </View>
               </View>
@@ -78,13 +94,23 @@ export default function LoginScreen() {
                 </View>
               </View>
 
+              {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
               <TouchableOpacity onPress={() => {}}>
                 <Text style={styles.forgotPassword}>Forgot Password?</Text>
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.enterButton} onPress={handleLogin}>
-              <Text style={styles.enterButtonText}>Enter</Text>
+            <TouchableOpacity
+              style={[styles.enterButton, !canSubmit && styles.enterButtonDisabled]}
+              onPress={handleLogin}
+              disabled={!canSubmit}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.enterButtonText}>Enter</Text>
+              )}
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -152,10 +178,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#f9f9f9",
     height: 50,
   },
-  icon: {
-    fontSize: 18,
-    marginRight: 10,
-  },
   input: {
     flex: 1,
     fontSize: 14,
@@ -163,6 +185,10 @@ const styles = StyleSheet.create({
   },
   eyeIcon: {
     padding: 8,
+  },
+  errorText: {
+    fontSize: 13,
+    color: "#c62828",
   },
   forgotPassword: {
     fontSize: 14,
@@ -176,13 +202,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: "auto",
   },
+  enterButtonDisabled: {
+    backgroundColor: "#ccc",
+  },
   enterButtonText: {
     fontSize: 16,
     fontWeight: "400",
     color: "#fff",
   },
-  eyeText:{
+  eyeText: {
     fontSize: 14,
     color: "#666",
-  }
+  },
 });

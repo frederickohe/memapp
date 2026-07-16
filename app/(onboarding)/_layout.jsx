@@ -1,6 +1,9 @@
 import { Stack } from "expo-router";
+import { useOnboardingGuard } from "@/hooks/useAuthBootstrap";
 
 export default function OnboardingLayout() {
+  useOnboardingGuard();
+
   return (
     <Stack
       screenOptions={{

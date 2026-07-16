@@ -17,7 +17,7 @@ const INDICATOR_HEIGHT = 42;
 const INDICATOR_TOP = (PILL_HEIGHT - INDICATOR_HEIGHT) / 2;
 
 // Slight overshoot when the indicator lands on the active tab → bounce back.
-const SLIDE_SPRING = { damping: 12, stiffness: 160, mass: 0.8 };
+const SLIDE_SPRING = { damping: 14, stiffness: 170, mass: 0.8 };
 
 const ICONS = {
   index: Home,
@@ -25,79 +25,60 @@ const ICONS = {
   profile: User,
 };
 
-function TabItem({ Icon, label, focused, onPress, onLayout }) {
-  return (
-    <TouchableOpacity
-      accessibilityRole="button"
-      accessibilityState={focused ? { selected: true } : {}}
-      accessibilityLabel={label}
-      onPress={onPress}
-      onLayout={onLayout}
-      activeOpacity={0.8}
-      style={styles.item}
-    >
-      <Icon
-        size={21}
-        color={focused ? BRAND_RED : INACTIVE}
-        strokeWidth={focused ? 2.4 : 2}
-      />
-      {focused && (
-        <Text style={styles.activeLabel} numberOfLines={1}>
-          {label}
-        </Text>
-      )}
-    </TouchableOpacity>
-  );
-}
-
 export default function CustomTabBar({ state, descriptors, navigation }) {
   const insets = useSafeAreaInsets();
 
-  const layoutsRef = useRef({});
-  const initialized = useRef(false);
+  // Base icons live in fixed, equal-width cells so they never move.
+  const cellLayouts = useRef({});
+  const [indicatorW, setIndicatorW] = useState(0);
   const [ready, setReady] = useState(false);
 
   const indicatorX = useSharedValue(0);
-  const indicatorW = useSharedValue(0);
 
-  const moveIndicator = (rect, animated) => {
+  const positionIndicator = (animated) => {
+    const cell = cellLayouts.current[state.index];
+    if (!cell || !indicatorW) return false;
+    const target = cell.x + cell.width / 2 - indicatorW / 2;
     if (animated) {
-      indicatorX.value = withSpring(rect.x, SLIDE_SPRING);
-      indicatorW.value = withSpring(rect.width, SLIDE_SPRING);
+      indicatorX.value = withSpring(target, SLIDE_SPRING);
     } else {
-      indicatorX.value = rect.x;
-      indicatorW.value = rect.width;
+      indicatorX.value = target;
     }
+    return true;
   };
 
-  const handleItemLayout = (index, e) => {
+  const handleCellLayout = (index, e) => {
     const { x, width } = e.nativeEvent.layout;
-    const prev = layoutsRef.current[index];
-    layoutsRef.current[index] = { x, width };
-
-    if (index !== state.index) return;
-
-    if (!initialized.current) {
-      moveIndicator({ x, width }, false);
-      initialized.current = true;
-      setReady(true);
-    } else if (!prev || prev.x !== x || prev.width !== width) {
-      // Active tab's size/position settled (e.g. label appeared) → slide + bounce.
-      moveIndicator({ x, width }, true);
+    cellLayouts.current[index] = { x, width };
+    if (index === state.index) {
+      if (!ready) {
+        if (positionIndicator(false)) setReady(true);
+      } else {
+        positionIndicator(true);
+      }
     }
   };
 
+  // Reposition when the active tab changes or the indicator is measured.
   useEffect(() => {
-    const rect = layoutsRef.current[state.index];
-    if (rect && initialized.current) {
-      moveIndicator(rect, true);
+    if (!indicatorW) return;
+    if (!ready) {
+      if (positionIndicator(false)) setReady(true);
+    } else {
+      positionIndicator(true);
     }
-  }, [state.index]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.index, indicatorW]);
 
   const indicatorStyle = useAnimatedStyle(() => ({
-    width: indicatorW.value,
     transform: [{ translateX: indicatorX.value }],
+    opacity: ready ? 1 : 0,
   }));
+
+  const activeRoute = state.routes[state.index];
+  const activeLabel =
+    descriptors[activeRoute.key].options.title ?? activeRoute.name;
+  const ActiveIcon = ICONS[activeRoute.name] ?? Home;
 
   return (
     <View
@@ -107,10 +88,18 @@ export default function CustomTabBar({ state, descriptors, navigation }) {
       ]}
     >
       <View style={styles.pill}>
-        {ready && (
-          <Reanimated.View style={[styles.indicator, indicatorStyle]} />
-        )}
+        {/* Sliding highlight (only moving element) */}
+        <Reanimated.View
+          style={[styles.indicator, indicatorStyle]}
+          onLayout={(e) => setIndicatorW(e.nativeEvent.layout.width)}
+        >
+          <ActiveIcon size={21} color={BRAND_RED} strokeWidth={2.4} />
+          <Text style={styles.activeLabel} numberOfLines={1}>
+            {activeLabel}
+          </Text>
+        </Reanimated.View>
 
+        {/* Fixed base cells */}
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
           const label = options.title ?? route.name;
@@ -130,14 +119,24 @@ export default function CustomTabBar({ state, descriptors, navigation }) {
           };
 
           return (
-            <TabItem
+            <TouchableOpacity
               key={route.key}
-              Icon={Icon}
-              label={label}
-              focused={focused}
+              accessibilityRole="button"
+              accessibilityState={focused ? { selected: true } : {}}
+              accessibilityLabel={label}
               onPress={onPress}
-              onLayout={(e) => handleItemLayout(index, e)}
-            />
+              onLayout={(e) => handleCellLayout(index, e)}
+              activeOpacity={0.8}
+              style={styles.item}
+            >
+              {/* Active base icon stays rendered but hidden behind the indicator. */}
+              <Icon
+                size={21}
+                color={INACTIVE}
+                strokeWidth={2}
+                style={{ opacity: focused ? 0 : 1 }}
+              />
+            </TouchableOpacity>
           );
         })}
       </View>
@@ -154,7 +153,6 @@ const styles = StyleSheet.create({
   pill: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-around",
     backgroundColor: PILL_BG,
     borderRadius: 30,
     height: PILL_HEIGHT,
@@ -171,19 +169,21 @@ const styles = StyleSheet.create({
     height: INDICATOR_HEIGHT,
     borderRadius: INDICATOR_HEIGHT / 2,
     backgroundColor: "#FFFFFF",
-  },
-  item: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 22,
+    gap: 8,
+  },
+  item: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    height: PILL_HEIGHT,
   },
   activeLabel: {
     color: BRAND_RED,
     fontSize: 13,
     fontWeight: "700",
-    marginLeft: 8,
   },
 });

@@ -19,6 +19,7 @@ import {
   OnboardingButton,
 } from "@/components/OnboardingFormComponents";
 import { ManIcon, WomanIcon } from "@/components/GenderIcons";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 // ─── Step definitions ────────────────────────────────────────
 const STEPS = [
@@ -34,6 +35,10 @@ const STEPS = [
 // ─── Main screen ─────────────────────────────────────────────
 export default function OnboardingStepperScreen() {
   const router = useRouter();
+  const signUp = useAuthStore((state) => state.signUp);
+  const isLoading = useAuthStore((state) => state.isLoading);
+  const storedPhone = useAuthStore((state) => state.phone);
+  const storedEmail = useAuthStore((state) => state.email);
   const scrollRef = useRef(null);
   const [currentStep, setCurrentStep] = useState(0);
 
@@ -54,8 +59,8 @@ export default function OnboardingStepperScreen() {
     instagram: "",
     linkedin: "",
     // Step 3
-    phone: "",
-    email: "",
+    phone: storedPhone,
+    email: storedEmail,
     address: "",
     // Step 4
     membershipType: "",
@@ -137,12 +142,30 @@ export default function OnboardingStepperScreen() {
     });
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep < STEPS.length - 1) {
       animateToStep(currentStep + 1, "forward");
-    } else {
-      // Final step → success
+      return;
+    }
+
+    if (!form.password) {
+      Alert.alert("Missing password", "Please enter a password.");
+      return;
+    }
+
+    if (form.password !== form.confirmPassword) {
+      Alert.alert("Password mismatch", "Password and confirmation do not match.");
+      return;
+    }
+
+    const result = await signUp(form);
+    if (result.success) {
       router.push("/(onboarding)/success");
+    } else {
+      Alert.alert(
+        "Sign up failed",
+        result.error?.message || "Unable to complete sign up. Please try again."
+      );
     }
   };
 
@@ -468,8 +491,9 @@ export default function OnboardingStepperScreen() {
         {/* ── Fixed footer button ── */}
         <View style={styles.footer}>
           <OnboardingButton
-            label={isLastStep ? "Submit" : "Next"}
+            label={isLastStep ? (isLoading ? "Submitting…" : "Submit") : "Next"}
             onPress={handleNext}
+            disabled={isLastStep && isLoading}
           />
           {currentStep > 0 && (
             <TouchableOpacity

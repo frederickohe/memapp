@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo } from "react";
 import {
   StyleSheet,
   Text,
@@ -24,20 +24,28 @@ import {
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { scaleFont } from "@/components/scale";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { mapAuthToProfile } from "@/lib/userProfile";
+
+const DEFAULT_AVATAR =
+  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80";
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const [member, setMember] = useState({
-    name: "Amanda Boakye",
-    branch: "Tesano",
-    id: "37725236ET",
-    age: "18",
-    gender: "Male",
-    interests: ["Football", "Tech", "Politics"],
-    dateJoined: "30/01/2010",
-    email: "amanda.boakye@ymca.org.gh",
-    phone: "+233 24 123 4567",
-  });
+  const signOut = useAuthStore((state) => state.signOut);
+  const fetchProfile = useAuthStore((state) => state.fetchProfile);
+  const user = useAuthStore((state) => state.user);
+  const phone = useAuthStore((state) => state.phone);
+  const email = useAuthStore((state) => state.email);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
+
+  const member = useMemo(
+    () => mapAuthToProfile({ user, phone, email }),
+    [user, phone, email]
+  );
 
   const handleEditProfile = () => {
     Alert.alert("Edit Profile", "Profile editing is not available in demo mode.");
@@ -46,7 +54,14 @@ export default function ProfileScreen() {
   const handleLogOut = () => {
     Alert.alert("Log Out", "Are you sure you want to log out?", [
       { text: "Cancel", style: "cancel" },
-      { text: "Log Out", style: "destructive", onPress: () => Alert.alert("Logged Out") },
+      {
+        text: "Log Out",
+        style: "destructive",
+        onPress: async () => {
+          await signOut();
+          router.replace("/(auth)/log-or-sign");
+        },
+      },
     ]);
   };
 
@@ -66,7 +81,7 @@ export default function ProfileScreen() {
         {/* Profile Card Section */}
         <View style={styles.profileCard}>
           <Image
-            source={{ uri: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80" }}
+            source={{ uri: member.avatar || DEFAULT_AVATAR }}
             style={styles.avatar}
           />
           <Text style={styles.name}>{member.name}</Text>
@@ -82,7 +97,7 @@ export default function ProfileScreen() {
             <Text style={styles.bannerYear}>2026</Text>
           </View>
           <View style={styles.statusPill}>
-            <Text style={styles.statusText}>Unpaid</Text>
+            <Text style={styles.statusText}>{member.affiliationStatus}</Text>
           </View>
           <TouchableOpacity
             style={styles.viewButton}
@@ -100,7 +115,7 @@ export default function ProfileScreen() {
             <Text style={styles.bannerYear}>2026</Text>
           </View>
           <View style={styles.statusPill}>
-            <Text style={styles.statusText}>Unpaid</Text>
+            <Text style={styles.statusText}>{member.duesStatus}</Text>
           </View>
           <TouchableOpacity
             style={styles.viewButton}
@@ -146,7 +161,9 @@ export default function ProfileScreen() {
               </View>
               <Text style={styles.infoLabel}>Age</Text>
             </View>
-            <Text style={styles.infoValue}>{member.age} Years</Text>
+            <Text style={styles.infoValue}>
+              {member.age === "—" ? member.age : `${member.age} Years`}
+            </Text>
           </View>
           <View style={styles.divider} />
 
@@ -192,11 +209,15 @@ export default function ProfileScreen() {
         {/* Interests Section */}
         <Text style={styles.sectionTitle}>Interests</Text>
         <View style={styles.interestsContainer}>
-          {member.interests.map((interest, idx) => (
-            <View key={idx} style={styles.interestPill}>
-              <Text style={styles.interestText}>{interest}</Text>
-            </View>
-          ))}
+          {member.interests.length > 0 ? (
+            member.interests.map((interest, idx) => (
+              <View key={idx} style={styles.interestPill}>
+                <Text style={styles.interestText}>{interest}</Text>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.emptyInterests}>No skills added yet</Text>
+          )}
         </View>
 
         {/* Action Buttons */}
@@ -394,6 +415,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "400",
     color: "#444",
+  },
+  emptyInterests: {
+    fontSize: 13,
+    color: "#999",
   },
   actionsContainer: {
     width: "100%",

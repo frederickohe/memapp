@@ -7,11 +7,12 @@ import {
   View,
 } from "react-native";
 
-import { SafeAreaView } from "react-native-safe-area-context"
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 export default function LogOrSignScreen() {
   const router = useRouter();
-
+  const setAuthIntent = useAuthStore((state) => state.setAuthIntent);
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
@@ -29,14 +30,20 @@ export default function LogOrSignScreen() {
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={[styles.button, styles.signUpButton]}
-            onPress={() => router.push("/(auth)/login")}
+            onPress={() => {
+              setAuthIntent("signup");
+              router.push("/(auth)/phone-number?intent=signup");
+            }}
           >
             <Text style={styles.buttonText}>Sign Up</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.button, styles.loginButton]}
-            onPress={() => router.push("/(auth)/login")}
+            onPress={() => {
+              setAuthIntent("login");
+              router.push("/(auth)/login?intent=login");
+            }}
           >
             <Text style={styles.loginButton_text}>Login</Text>
           </TouchableOpacity>
