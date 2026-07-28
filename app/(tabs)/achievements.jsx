@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -21,10 +22,15 @@ import {
   MoreVertical,
   Flame,
   CalendarCheck,
-  Medal,
   Lock,
   DollarSign,
 } from "lucide-react-native";
+
+const MILESTONE_IMAGES = {
+  bronze: require("@/assets/images/milestones/bronze.png"),
+  platinum: require("@/assets/images/milestones/platinum.png"),
+  gold: require("@/assets/images/milestones/gold.png"),
+};
 
 // Rank progress ring geometry (draws on first load).
 const RANK_RING_SIZE = 192;
@@ -56,7 +62,7 @@ function StatCard({ icon, label, value, active }) {
   );
 }
 
-function MilestoneBadge({ tierColor, label, locked, onPress }) {
+function MilestoneBadge({ image, label, locked, onPress }) {
   const content = (
     <>
       <View
@@ -70,7 +76,7 @@ function MilestoneBadge({ tierColor, label, locked, onPress }) {
             <Lock size={20} color={COLORS.textDark} strokeWidth={2} />
           </View>
         ) : (
-          <Medal size={40} color={tierColor} strokeWidth={1.75} />
+          <Image source={image} style={styles.badgeImage} resizeMode="contain" />
         )}
       </View>
       <Text style={[styles.badgeLabel, locked && styles.badgeLabelLocked]}>
@@ -220,10 +226,10 @@ export default function AchievementsScreen() {
           </View>
 
           <View style={styles.badgeGrid}>
-            <MilestoneBadge tierColor="#CD7F32" label="First Step" />
-            <MilestoneBadge tierColor="#9CA3AF" label="Helper" />
+            <MilestoneBadge image={MILESTONE_IMAGES.bronze} label="First Step" />
+            <MilestoneBadge image={MILESTONE_IMAGES.platinum} label="Helper" />
             <MilestoneBadge
-              tierColor="#F59E0B"
+              image={MILESTONE_IMAGES.gold}
               label="Champion"
               onPress={() => router.push("/volunteer")}
             />
@@ -428,6 +434,10 @@ const styles = StyleSheet.create({
   },
   badgeCircleLocked: {
     backgroundColor: COLORS.bg,
+  },
+  badgeImage: {
+    width: 78,
+    height: 78,
   },
   lockedInner: {
     opacity: 0.5,

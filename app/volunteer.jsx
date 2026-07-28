@@ -6,14 +6,13 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import {
   ChevronLeft,
   Pencil,
-  Award,
   Trash2,
   BookOpen,
   Package,
@@ -175,15 +174,12 @@ export default function VolunteerScreen() {
 
             {/* Gold badge inside the ring */}
             <View style={styles.badge}>
-              <LinearGradient
-                colors={["#F9E08A", "#E6A817", "#B8760A"]}
-                start={{ x: 0.2, y: 0 }}
-                end={{ x: 0.8, y: 1 }}
-                style={styles.badgeGradient}
-              >
-                <Award size={60} color="#FFFFFF" strokeWidth={1.6} />
-                <Text style={styles.badgeLevel}>LEVEL 8</Text>
-              </LinearGradient>
+              <Image
+                source={require("@/assets/images/milestones/gold.png")}
+                style={styles.badgeImage}
+                resizeMode="contain"
+              />
+              <Text style={styles.badgeLevel}>LEVEL 8</Text>
             </View>
           </View>
 
@@ -275,7 +271,11 @@ export default function VolunteerScreen() {
         })}
 
         {/* CTA */}
-        <TouchableOpacity style={styles.ctaButton} activeOpacity={0.9}>
+        <TouchableOpacity
+          style={styles.ctaButton}
+          activeOpacity={0.9}
+          onPress={() => router.push("/apply-volunteer-hours")}
+        >
           <Text style={styles.ctaText}>Apply for Volunteer Hours</Text>
           <ArrowRight size={18} color="#FFFFFF" strokeWidth={2.2} />
         </TouchableOpacity>
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
   /* Hero */
   hero: {
     alignItems: "center",
-    marginBottom: 40,
+    marginBottom: 35,
   },
   ringWrapper: {
     width: RING_SIZE,
@@ -336,24 +336,19 @@ const styles = StyleSheet.create({
     width: RING_SIZE - RING_STROKE * 2 - 20,
     height: RING_SIZE - RING_STROKE * 2 - 20,
     borderRadius: (RING_SIZE - RING_STROKE * 2 - 20) / 2,
-    shadowColor: "#E6A817",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 14,
-    elevation: 8,
-  },
-  badgeGradient: {
-    flex: 1,
-    borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
   },
+  badgeImage: {
+    width: 140,
+    height: 140,
+  },
   badgeLevel: {
-    color: "#FFFFFF",
-    fontSize: 18,
+    color: COLORS.dark,
+    fontSize: 16,
     fontWeight: "800",
     letterSpacing: 2,
-    marginTop: 6,
+    marginTop: 3,
   },
   heroTitle: {
     fontSize: 26,
@@ -376,7 +371,7 @@ const styles = StyleSheet.create({
     borderColor: "#EEEEEE",
     borderRadius: 12,
     padding: 25,
-    marginBottom: 40,
+    marginBottom: 30,
   },
   progressTop: {
     flexDirection: "row",

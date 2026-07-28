@@ -9,6 +9,7 @@ import {
   Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { navigateToAuthenticatedApp } from "@/lib/authNavigation";
 
 const CIRCLE_SIZE = 130;
 
@@ -105,7 +106,7 @@ export default function SuccessScreen() {
 
       // Navigate to main app after ~3.2s of success animation
       const navTimer = setTimeout(() => {
-        router.replace("/(tabs)");
+        navigateToAuthenticatedApp(router);
       }, 3200);
       return () => clearTimeout(navTimer);
     }, 2200);

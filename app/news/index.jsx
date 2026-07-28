@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
   StyleSheet,
   Text,
   View,
@@ -20,75 +21,14 @@ import {
   Share2,
   ChevronDown,
 } from "lucide-react-native";
-import { scaleFont } from "@/components/scale";
-
-
-// Export the mock news database so it can be shared with the detail screen
-export const mockNews = [
-  {
-    id: "1",
-    title: "YMCA Launches New Youth Basketball League",
-    summary: "Register today for the upcoming season! Open to all kids aged 6-16. Join us for a season of teamwork, skills development, and fun.",
-    content: "The YMCA is thrilled to announce the launch of our new Youth Basketball League for the 2026 season. Designed for youth of all skill levels from ages 6 to 16, this program focuses on building confidence, teaching fundamental skills, and fostering team spirit.\n\nGames and practices will be held at our main gymnasium starting next month. Our certified coaches are dedicated to creating a positive and inclusive environment where every player can thrive.\n\nRegistration is now officially open online and at our front desk. Early bird pricing is available until the end of this week, so make sure to secure your spot today! We look forward to seeing our community come together for a fantastic season on the court.",
-    image: "https://picsum.photos/seed/basketball/800/500",
-    category: "Activities",
-    date: "June 24, 2026",
-    timeAgo: "15 min ago",
-    likes: 42,
-    comments: 12,
-    bookmarks: 8,
-  },
-  {
-    id: "2",
-    title: "Community Clean-Up Campaign a Huge Success",
-    summary: "Over 200 volunteers joined forces this weekend to clean up and beautify our local community parks and recreational spaces.",
-    content: "Our annual Spring Community Clean-Up Campaign exceeded all expectations this year. On Saturday morning, over 200 volunteers—including families, local business owners, and youth groups—gathered at the YMCA center before heading out to work on five key parks in our neighborhood.\n\nTogether, we collected over 150 bags of litter, planted 50 new native trees, and repainted worn-out playground equipment. It was an inspiring display of community cooperation and environmental stewardship.\n\nWe want to extend a massive thank you to everyone who dedicated their Saturday morning to making our neighborhood cleaner, greener, and more beautiful. Check out the photos from the event above!",
-    image: "https://picsum.photos/seed/cleanup/800/500",
-    category: "Projects",
-    date: "June 22, 2026",
-    timeAgo: "2 days ago",
-    likes: 128,
-    comments: 34,
-    bookmarks: 25,
-  },
-  {
-    id: "3",
-    title: "New Fitness Center Equipment Installed",
-    summary: "We've upgraded our gym with state-of-the-art cardio and strength training equipment. Come try them out today!",
-    content: "Great news for all fitness enthusiasts! As part of our commitment to providing the best wellness resources for our members, the YMCA has fully upgraded its main fitness center with brand-new, state-of-the-art cardio and strength training equipment.\n\nThe new additions include premium smart treadmills, elliptical trainers with interactive virtual routes, and a complete line of selectorized strength machines. We've also expanded our free weight zone to accommodate more workouts during peak hours.\n\nOur personal trainers will be offering free orientation sessions all week to help you get familiar with the new machines and customize your workout routines. Drop by and elevate your fitness journey today!",
-    image: "https://picsum.photos/seed/fitness/800/500",
-    category: "Activities",
-    date: "June 20, 2026",
-    timeAgo: "4 days ago",
-    likes: 85,
-    comments: 19,
-    bookmarks: 14,
-  },
-];
+import { useNews } from "@/hooks/useNews";
+import { formatTimeAgo } from "@/lib/newsUtils";
 
 export default function NewsFeedScreen() {
   const router = useRouter();
   const [activeFilter, setActiveFilter] = useState("All");
-  const [newsList, setNewsList] = useState(mockNews);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  // Filter the list based on filter pill selection
-  const handleFilter = (filter) => {
-    setActiveFilter(filter);
-    if (filter === "All") {
-      setNewsList(mockNews);
-    } else {
-      setNewsList(mockNews.filter((item) => item.category === filter));
-    }
-  };
-
-  // Fake refresh action
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
-    }, 800);
-  };
+  const { newsList, isLoading, isRefreshing, error, lastUpdated, refresh } =
+    useNews(activeFilter);
 
   const renderNewsItem = ({ item }) => {
     return (
@@ -97,19 +37,22 @@ export default function NewsFeedScreen() {
         activeOpacity={0.95}
         onPress={() => router.push(`/news/${item.id}`)}
       >
-        {/* Card Header & Blurb Text (above image) */}
         <View style={styles.cardHeader}>
           <View style={styles.categoryRow}>
             <View
               style={[
                 styles.categoryBadge,
-                item.category === "Projects" ? styles.badgeProjects : styles.badgeActivities,
+                item.category === "Projects"
+                  ? styles.badgeProjects
+                  : styles.badgeActivities,
               ]}
             >
               <Text
                 style={[
                   styles.categoryBadgeText,
-                  item.category === "Projects" ? styles.textProjects : styles.textActivities,
+                  item.category === "Projects"
+                    ? styles.textProjects
+                    : styles.textActivities,
                 ]}
               >
                 {item.category}
@@ -121,10 +64,8 @@ export default function NewsFeedScreen() {
           <Text style={styles.postSummary}>{item.summary}</Text>
         </View>
 
-        {/* Full-width Image */}
         <Image source={{ uri: item.image }} style={styles.postImage} />
 
-        {/* Stats Row at the bottom */}
         <View style={styles.statsRow}>
           <View style={styles.leftStats}>
             <TouchableOpacity style={styles.statButton} activeOpacity={0.7}>
@@ -149,11 +90,14 @@ export default function NewsFeedScreen() {
     );
   };
 
+  const updatedLabel = lastUpdated
+    ? `Updated ${formatTimeAgo(lastUpdated.toISOString())}`
+    : "Updated just now";
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
 
-      {/* Header Bar */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -165,19 +109,21 @@ export default function NewsFeedScreen() {
         <Text style={styles.headerTitle}>News&Updates</Text>
         <TouchableOpacity
           style={styles.refreshButton}
-          onPress={handleRefresh}
+          onPress={refresh}
           activeOpacity={0.7}
         >
-          <RotateCw size={20} color="#111" style={isRefreshing ? styles.rotating : null} />
+          <RotateCw
+            size={20}
+            color="#111"
+            style={isRefreshing ? styles.rotating : null}
+          />
         </TouchableOpacity>
       </View>
 
-      {/* List Subtitle */}
       <View style={styles.subtitleRow}>
-        <Text style={styles.subtitleText}>Updated 15min ago</Text>
+        <Text style={styles.subtitleText}>{updatedLabel}</Text>
       </View>
 
-      {/* Filter Tabs Row */}
       <View style={styles.filterContainer}>
         <ScrollView
           horizontal
@@ -191,7 +137,7 @@ export default function NewsFeedScreen() {
                 styles.filterPill,
                 activeFilter === filter && styles.filterPillActive,
               ]}
-              onPress={() => handleFilter(filter)}
+              onPress={() => setActiveFilter(filter)}
               activeOpacity={0.8}
             >
               <Text
@@ -211,21 +157,33 @@ export default function NewsFeedScreen() {
         </ScrollView>
       </View>
 
-      {/* News FlatList */}
-      <FlatList
-        data={newsList}
-        renderItem={renderNewsItem}
-        keyExtractor={(item) => item.id}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContent}
-        refreshing={isRefreshing}
-        onRefresh={handleRefresh}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No updates found in this category.</Text>
-          </View>
-        }
-      />
+      {isLoading ? (
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color="#FF3B30" />
+        </View>
+      ) : (
+        <FlatList
+          data={newsList}
+          renderItem={renderNewsItem}
+          keyExtractor={(item) => item.id}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+          refreshing={isRefreshing}
+          onRefresh={refresh}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>
+                {error || "No updates found in this category."}
+              </Text>
+              {error ? (
+                <TouchableOpacity onPress={refresh} style={styles.retryButton}>
+                  <Text style={styles.retryText}>Try again</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          }
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -283,7 +241,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   filterPillActive: {
-    backgroundColor: "#FF3B30", // Highlighted red by default
+    backgroundColor: "#FF3B30",
   },
   filterPillText: {
     fontSize: 13,
@@ -306,6 +264,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "400",
     color: "#666",
+  },
+  loadingWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   listContent: {
     paddingHorizontal: 20,
@@ -408,9 +371,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 50,
+    gap: 12,
   },
   emptyText: {
     fontSize: 14,
     color: "#888",
+    textAlign: "center",
+  },
+  retryButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: "#000",
+  },
+  retryText: {
+    color: "#fff",
+    fontSize: 14,
   },
 });

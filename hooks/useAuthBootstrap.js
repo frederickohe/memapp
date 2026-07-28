@@ -1,29 +1,67 @@
 import { useRouter } from "expo-router";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
+import { BackHandler } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { resolveInitialRoute } from "@/lib/authRouting";
+import { isAuthenticated } from "@/lib/authRouting";
+import { navigateToAuthenticatedApp } from "@/lib/authNavigation";
+
+function shouldBlockAuthAccess(state) {
+  return isAuthenticated(state) && state.onboardingComplete;
+}
 
 /**
- * Restores the correct route once persisted auth state has hydrated.
+ * Redirects authenticated users away from auth screens.
  */
-export function useAuthBootstrap(enabled = true) {
+export function useAuthGuard() {
   const router = useRouter();
 
+  const redirectIfAuthenticated = useCallback(() => {
+    const state = useAuthStore.getState();
+    if (shouldBlockAuthAccess(state)) {
+      navigateToAuthenticatedApp(router);
+    }
+  }, [router]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (useAuthStore.persist.hasHydrated()) {
+        redirectIfAuthenticated();
+      } else {
+        return useAuthStore.persist.onFinishHydration(redirectIfAuthenticated);
+      }
+    }, [redirectIfAuthenticated])
+  );
+
   useEffect(() => {
-    if (!enabled) return;
-
-    const restoreSession = () => {
-      const route = resolveInitialRoute(useAuthStore.getState());
-      router.replace(route);
-    };
-
     if (useAuthStore.persist.hasHydrated()) {
-      restoreSession();
+      redirectIfAuthenticated();
       return;
     }
 
-    return useAuthStore.persist.onFinishHydration(restoreSession);
-  }, [enabled, router]);
+    return useAuthStore.persist.onFinishHydration(redirectIfAuthenticated);
+  }, [redirectIfAuthenticated]);
+}
+
+/**
+ * Prevents hardware back from leaving the main app while logged in.
+ */
+export function useAppBackGuard() {
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        const state = useAuthStore.getState();
+        return shouldBlockAuthAccess(state);
+      };
+
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress
+      );
+
+      return () => subscription.remove();
+    }, [])
+  );
 }
 
 /**
@@ -34,9 +72,9 @@ export function useOnboardingGuard() {
 
   useEffect(() => {
     const guard = () => {
-      const route = resolveInitialRoute(useAuthStore.getState());
-      if (route === "/(tabs)") {
-        router.replace(route);
+      const state = useAuthStore.getState();
+      if (shouldBlockAuthAccess(state)) {
+        navigateToAuthenticatedApp(router);
       }
     };
 

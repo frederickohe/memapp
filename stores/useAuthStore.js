@@ -44,6 +44,20 @@ async function resolveUser(token, fallbackUser) {
   }
 }
 
+function logAuthToken(token, source) {
+  if (!__DEV__ || !token) return;
+
+  console.log("[auth] token for Swagger", {
+    source,
+    token,
+    authorizationHeader: `Bearer ${token}`,
+  });
+}
+
+export function logCurrentAuthToken() {
+  logAuthToken(useAuthStore.getState().token, "manual");
+}
+
 export const useAuthStore = create(
   persist(
     (set, get) => ({
@@ -57,6 +71,9 @@ export const useAuthStore = create(
       otpVerified: false,
       onboardingComplete: false,
       isLoading: false,
+      isProfileLoading: false,
+      profileLoaded: false,
+      profileError: null,
       error: null,
 
       setAuthIntent: (authIntent) => set({ authIntent }),
@@ -66,23 +83,24 @@ export const useAuthStore = create(
       clearError: () => set({ error: null }),
 
       signIn: async (email, password) => {
-        set({ isLoading: true, error: null });
+        set({ isLoading: true, error: null, profileLoaded: false });
         try {
           const response = await signInRequest({ email, password });
           const auth = extractAuthPayload(response);
-          const user = await resolveUser(auth.token, auth.user);
 
           set({
             token: auth.token,
             refreshToken: auth.refreshToken,
-            user,
-            email: user?.email || email,
-            phone: user?.phone_number || get().phone,
+            user: auth.user,
+            email,
+            phone: get().phone,
             authIntent: null,
             otpVerified: false,
             onboardingComplete: true,
             isLoading: false,
           });
+
+          logAuthToken(auth.token, "signIn");
 
           return { success: true, response };
         } catch (error) {
@@ -127,7 +145,7 @@ export const useAuthStore = create(
 
       signUp: async (form) => {
         const { phone, email, otp } = get();
-        set({ isLoading: true, error: null });
+        set({ isLoading: true, error: null, profileLoaded: false });
 
         try {
           const payload = buildSignupPayload(form, { phone, email });
@@ -167,7 +185,9 @@ export const useAuthStore = create(
             onboardingComplete: true,
           });
 
-          return { success: true, response: signupResponse };
+          logAuthToken(auth.token, "signUp");
+
+          return { success: true, response: signupResponse, needsProfileRefresh: true };
         } catch (error) {
           set({
             isLoading: false,
@@ -181,7 +201,11 @@ export const useAuthStore = create(
 
       fetchProfile: async () => {
         const { token, user: currentUser } = get();
-        if (!token) return { success: false };
+        if (!token) {
+          return { success: false, error: new Error("Missing auth token") };
+        }
+
+        set({ isProfileLoading: true, profileError: null });
 
         try {
           const user = await getCurrentUser(token);
@@ -189,9 +213,18 @@ export const useAuthStore = create(
             user,
             email: user?.email || get().email,
             phone: user?.phone_number || get().phone,
+            isProfileLoading: false,
+            profileLoaded: true,
+            profileError: null,
           });
           return { success: true, user };
         } catch (error) {
+          set({
+            isProfileLoading: false,
+            profileLoaded: Boolean(currentUser),
+            profileError: error.message || "Unable to load profile",
+            user: currentUser,
+          });
           return { success: false, error, user: currentUser };
         }
       },
@@ -217,6 +250,9 @@ export const useAuthStore = create(
           otpVerified: false,
           onboardingComplete: false,
           isLoading: false,
+          isProfileLoading: false,
+          profileLoaded: false,
+          profileError: null,
           error: null,
         });
       },
@@ -234,7 +270,11 @@ export const useAuthStore = create(
         email: state.email,
         otpVerified: state.otpVerified,
         onboardingComplete: state.onboardingComplete,
+        profileLoaded: state.profileLoaded,
       }),
+      onRehydrateStorage: () => (state) => {
+        logAuthToken(state?.token, "persist rehydrate");
+      },
     }
   )
 );
@@ -243,5 +283,5 @@ export function getPostAuthRoute(intent) {
   if (intent === "signup") {
     return "/(onboarding)/welcome";
   }
-  return "/(tabs)";
+  return "/loading-profile?next=/(tabs)";
 }

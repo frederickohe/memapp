@@ -1,8 +1,11 @@
 import { Tabs } from "expo-router";
 import React from "react";
 import CustomTabBar from "@/components/CustomTabBar";
+import { useAppBackGuard } from "@/hooks/useAuthBootstrap";
 
 export default function TabLayout() {
+  useAppBackGuard();
+
   return (
     <Tabs
       screenOptions={{ headerShown: false }}

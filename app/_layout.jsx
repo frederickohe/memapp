@@ -15,16 +15,13 @@ import {
 } from "react-native";
 import "react-native-reanimated";
 import { LATO_FONTS, applyGlobalLatoFont } from "@/components/latoFont";
-import { useAuthBootstrap } from "@/hooks/useAuthBootstrap";
+import { useAuthAccess } from "@/hooks/useAuthAccess";
 
-// Make Lato the app-wide default font for every Text / TextInput.
 applyGlobalLatoFont();
 SplashScreen.preventAutoHideAsync();
 
 const { width, height } = Dimensions.get("window");
 
-// Landscape splash image. Scale it to fill the screen height, which makes it
-// wider than the screen so it can be panned left-to-right to reveal the full image.
 const SPLASH_SOURCE = require("@/assets/images/splash-screen.png");
 const splashMeta = Image.resolveAssetSource(SPLASH_SOURCE);
 const splashRatio =
@@ -44,17 +41,14 @@ export default function RootLayout() {
   const [splashVisible, setSplashVisible] = useState(true);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const panAnim = useRef(new Animated.Value(0)).current;
-
-  useAuthBootstrap(fontsLoaded);
+  const { hydrated, canAccessApp, canAccessOnboarding, canAccessAuth } =
+    useAuthAccess();
 
   useEffect(() => {
     if (!fontsLoaded) return;
 
-    // Hide the native splash once fonts are ready, then run the custom splash.
     SplashScreen.hideAsync();
 
-    // Slowly pan the landscape image from left to right so the user sees all of
-    // it, then fade the splash out.
     const animation = Animated.timing(panAnim, {
       toValue: 1,
       duration: SPLASH_PAN_DURATION,
@@ -73,38 +67,56 @@ export default function RootLayout() {
     });
 
     return () => animation.stop();
-  }, [fontsLoaded]);
+  }, [fontsLoaded, fadeAnim, panAnim]);
 
   const splashTranslateX = panAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [0, -SPLASH_PAN_DISTANCE],
   });
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded || !hydrated) {
     return null;
   }
 
   return (
     <>
-      <Stack>
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="news" options={{ headerShown: false }} />
-        <Stack.Screen name="volunteer" options={{ headerShown: false }} />
-        <Stack.Screen name="notifications" options={{ headerShown: false }} />
-        <Stack.Screen name="impact" options={{ headerShown: false }} />
-        <Stack.Screen name="connect" options={{ headerShown: false }} />
-        <Stack.Screen name="connect-user" options={{ headerShown: false }} />
-        <Stack.Screen name="connect-list" options={{ headerShown: false }} />
-        <Stack.Screen name="connect-profile" options={{ headerShown: false }} />
-        <Stack.Screen name="programs" options={{ headerShown: false }} />
-        <Stack.Screen name="surveys" options={{ headerShown: false }} />
-        <Stack.Screen name="affiliation" options={{ headerShown: false }} />
-        <Stack.Screen name="payment-method" options={{ headerShown: false }} />
-        <Stack.Screen name="pay-upi" options={{ headerShown: false }} />
-        <Stack.Screen name="pay-card" options={{ headerShown: false }} />
-        <Stack.Screen name="add-card" options={{ headerShown: false }} />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Protected guard={canAccessApp}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen
+            name="loading-profile"
+            options={{ gestureEnabled: false }}
+          />
+          <Stack.Screen name="news" />
+          <Stack.Screen name="volunteer" />
+          <Stack.Screen name="apply-volunteer-hours" />
+          <Stack.Screen name="apply-volunteer-hours-form" />
+          <Stack.Screen
+            name="apply-volunteer-hours-success"
+            options={{ gestureEnabled: false }}
+          />
+          <Stack.Screen name="notifications" />
+          <Stack.Screen name="impact" />
+          <Stack.Screen name="connect" />
+          <Stack.Screen name="connect-user" />
+          <Stack.Screen name="connect-list" />
+          <Stack.Screen name="connect-profile" />
+          <Stack.Screen name="programs" />
+          <Stack.Screen name="surveys" />
+          <Stack.Screen name="affiliation" />
+          <Stack.Screen name="payment-method" />
+          <Stack.Screen name="pay-upi" />
+          <Stack.Screen name="pay-card" />
+          <Stack.Screen name="add-card" />
+        </Stack.Protected>
+
+        <Stack.Protected guard={canAccessOnboarding}>
+          <Stack.Screen name="(onboarding)" />
+        </Stack.Protected>
+
+        <Stack.Protected guard={canAccessAuth}>
+          <Stack.Screen name="(auth)" />
+        </Stack.Protected>
       </Stack>
       <StatusBar style="auto" />
 
@@ -175,12 +187,5 @@ const styles = StyleSheet.create({
     fontSize: 38,
     fontWeight: "700",
     letterSpacing: 0.5,
-  },
-  splashSubtitle: {
-    color: "rgba(255, 255, 255, 0.9)",
-    fontSize: 16,
-    fontWeight: "500",
-    letterSpacing: 1,
-    marginTop: 8,
   },
 });

@@ -14,6 +14,7 @@ import {
 
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { navigateToAuthenticatedApp } from "@/lib/authNavigation";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -32,7 +33,7 @@ export default function LoginScreen() {
     clearError();
     const result = await signIn(email.trim(), password);
     if (result.success) {
-      router.replace("/(tabs)");
+      navigateToAuthenticatedApp(router);
     }
   };
 

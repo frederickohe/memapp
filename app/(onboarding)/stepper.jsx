@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
   Alert,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -18,8 +19,12 @@ import {
   ConsentRow,
   OnboardingButton,
 } from "@/components/OnboardingFormComponents";
-import { ManIcon, WomanIcon } from "@/components/GenderIcons";
 import { useAuthStore } from "@/stores/useAuthStore";
+
+const GENDER_IMAGES = {
+  male: require("@/assets/images/gender/male.png"),
+  female: require("@/assets/images/gender/female.png"),
+};
 
 // ─── Step definitions ────────────────────────────────────────
 const STEPS = [
@@ -204,7 +209,7 @@ export default function OnboardingStepperScreen() {
             />
             {/* Gender selector */}
             <View style={styles.genderSection}>
-              <Text style={styles.genderLabel}>Your Gender: (from)</Text>
+              <Text style={styles.genderLabel}>Your Gender:</Text>
               <View style={styles.genderOptions}>
                 <TouchableOpacity
                   style={[
@@ -219,9 +224,10 @@ export default function OnboardingStepperScreen() {
                       form.gender === "male" && styles.genderAvatarActive,
                     ]}
                   >
-                    <ManIcon
-                      size={30}
-                      color={form.gender === "male" ? "#000" : "#777"}
+                    <Image
+                      source={GENDER_IMAGES.male}
+                      style={styles.genderImage}
+                      resizeMode="contain"
                     />
                   </View>
                   <Text style={styles.genderText}>Male</Text>
@@ -239,9 +245,10 @@ export default function OnboardingStepperScreen() {
                       form.gender === "female" && styles.genderAvatarActive,
                     ]}
                   >
-                    <WomanIcon
-                      size={30}
-                      color={form.gender === "female" ? "#000" : "#777"}
+                    <Image
+                      source={GENDER_IMAGES.female}
+                      style={styles.genderImage}
+                      resizeMode="contain"
                     />
                   </View>
                   <Text style={styles.genderText}>Female</Text>
@@ -680,16 +687,21 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0f0f0",
   },
   genderAvatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: "#e8e8e8",
+    width: 72,
+    height: 72,
+    borderRadius: 12,
+    backgroundColor: "#000",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: 8,
+    overflow: "hidden",
   },
   genderAvatarActive: {
-    backgroundColor: "#dcdcdc",
+    backgroundColor: "#000",
+  },
+  genderImage: {
+    width: "100%",
+    height: "100%",
   },
   genderText: {
     fontSize: 13,

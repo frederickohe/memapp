@@ -1,9 +1,10 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -28,34 +29,16 @@ export default function ConfirmationCodeScreen() {
   const isLoading = useAuthStore((state) => state.isLoading);
   const error = useAuthStore((state) => state.error);
   const clearError = useAuthStore((state) => state.clearError);
-  const [code, setCode] = useState(Array(OTP_LENGTH).fill(""));
-  const inputRefs = useRef([]);
+  const [code, setCode] = useState("");
+  const inputRef = useRef(null);
 
-  const handleCodeChange = (index, value) => {
-    const newCode = [...code];
-    const cleanValue = value.replace(/[^0-9]/g, "");
-    newCode[index] = cleanValue;
-    setCode(newCode);
+  useEffect(() => {
+    const timer = setTimeout(() => inputRef.current?.focus(), 300);
+    return () => clearTimeout(timer);
+  }, []);
 
-    if (cleanValue && index < OTP_LENGTH - 1) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleKeyPress = (index, event) => {
-    if (event.nativeEvent.key === "Backspace") {
-      if (!code[index] && index > 0) {
-        const newCode = [...code];
-        newCode[index - 1] = "";
-        setCode(newCode);
-        inputRefs.current[index - 1]?.focus();
-      }
-    }
-  };
-
-  const handleConfirmation = async () => {
-    const fullCode = code.join("");
-    if (fullCode.length !== OTP_LENGTH) return;
+  const submitCode = async (fullCode) => {
+    if (fullCode.length !== OTP_LENGTH || isLoading) return;
 
     clearError();
     const result = await verifyOtpCode(fullCode);
@@ -64,12 +47,28 @@ export default function ConfirmationCodeScreen() {
     }
   };
 
+  const handleCodeChange = (value) => {
+    const digits = value.replace(/[^0-9]/g, "").slice(0, OTP_LENGTH);
+    setCode(digits);
+    if (error) clearError();
+
+    if (digits.length === OTP_LENGTH) {
+      submitCode(digits);
+    }
+  };
+
+  const handleConfirmation = async () => {
+    await submitCode(code);
+  };
+
   const handleResend = async () => {
     clearError();
+    setCode("");
+    inputRef.current?.focus();
     await sendOtp({ phone, email });
   };
 
-  const isCodeComplete = code.every((digit) => digit !== "");
+  const isCodeComplete = code.length === OTP_LENGTH;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -77,7 +76,7 @@ export default function ConfirmationCodeScreen() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.flex}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
             <TouchableOpacity onPress={() => router.back()}>
               <Text style={styles.backButton}>←</Text>
@@ -88,22 +87,40 @@ export default function ConfirmationCodeScreen() {
             <View>
               <Text style={styles.title}>Confirmation Code</Text>
 
-              <View style={styles.codeInputContainer}>
-                {code.map((digit, index) => (
-                  <TextInput
-                    ref={(ref) => (inputRefs.current[index] = ref)}
-                    key={index}
-                    style={styles.codeInput}
-                    maxLength={1}
-                    keyboardType="numeric"
-                    value={digit}
-                    onChangeText={(value) => handleCodeChange(index, value)}
-                    onKeyPress={(event) => handleKeyPress(index, event)}
-                    placeholder="-"
-                    placeholderTextColor="#ccc"
-                  />
-                ))}
-              </View>
+              <Pressable style={styles.codeInputContainer} onPress={() => inputRef.current?.focus()}>
+                {Array.from({ length: OTP_LENGTH }).map((_, index) => {
+                  const digit = code[index] ?? "";
+                  const isActive = code.length === index;
+
+                  return (
+                    <View
+                      key={index}
+                      style={[
+                        styles.codeInput,
+                        isActive && styles.codeInputActive,
+                        digit !== "" && styles.codeInputFilled,
+                      ]}
+                    >
+                      <Text style={[styles.codeDigit, !digit && styles.codeDigitEmpty]}>
+                        {digit || "-"}
+                      </Text>
+                    </View>
+                  );
+                })}
+
+                <TextInput
+                  ref={inputRef}
+                  value={code}
+                  onChangeText={handleCodeChange}
+                  keyboardType="number-pad"
+                  textContentType="oneTimeCode"
+                  autoComplete={Platform.OS === "android" ? "sms-otp" : "one-time-code"}
+                  maxLength={OTP_LENGTH}
+                  caretHidden
+                  style={styles.hiddenInput}
+                  editable={!isLoading}
+                />
+              </Pressable>
 
               {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
@@ -173,6 +190,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 8,
     marginBottom: 24,
+    position: "relative",
   },
   codeInput: {
     flex: 1,
@@ -180,10 +198,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e0e0e0",
     borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f9f9f9",
+  },
+  codeInputActive: {
+    borderColor: "#000",
+  },
+  codeInputFilled: {
+    borderColor: "#bbb",
+  },
+  codeDigit: {
     fontSize: 24,
     fontWeight: "400",
-    textAlign: "center",
-    backgroundColor: "#f9f9f9",
+    color: "#000",
+  },
+  codeDigitEmpty: {
+    color: "#ccc",
+  },
+  hiddenInput: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.02,
+    color: "transparent",
   },
   errorText: {
     fontSize: 13,

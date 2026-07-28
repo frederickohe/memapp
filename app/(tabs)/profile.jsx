@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import { useRouter } from "expo-router";
 import {
   StyleSheet,
   Text,
@@ -22,10 +22,10 @@ import {
   ChevronRight,
   ShieldAlert,
 } from "lucide-react-native";
-import { useRouter } from "expo-router";
 import { scaleFont } from "@/components/scale";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { mapAuthToProfile } from "@/lib/userProfile";
+import { navigateToSignedOutApp } from "@/lib/authNavigation";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
 const DEFAULT_AVATAR =
   "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80";
@@ -33,19 +33,7 @@ const DEFAULT_AVATAR =
 export default function ProfileScreen() {
   const router = useRouter();
   const signOut = useAuthStore((state) => state.signOut);
-  const fetchProfile = useAuthStore((state) => state.fetchProfile);
-  const user = useAuthStore((state) => state.user);
-  const phone = useAuthStore((state) => state.phone);
-  const email = useAuthStore((state) => state.email);
-
-  useEffect(() => {
-    fetchProfile();
-  }, [fetchProfile]);
-
-  const member = useMemo(
-    () => mapAuthToProfile({ user, phone, email }),
-    [user, phone, email]
-  );
+  const member = useUserProfile();
 
   const handleEditProfile = () => {
     Alert.alert("Edit Profile", "Profile editing is not available in demo mode.");
@@ -59,7 +47,7 @@ export default function ProfileScreen() {
         style: "destructive",
         onPress: async () => {
           await signOut();
-          router.replace("/(auth)/log-or-sign");
+          navigateToSignedOutApp(router);
         },
       },
     ]);
@@ -86,7 +74,7 @@ export default function ProfileScreen() {
           />
           <Text style={styles.name}>{member.name}</Text>
           <View style={styles.idBadge}>
-            <Text style={styles.idBadgeText}>MEMBER ID: {member.id}</Text>
+            <Text style={styles.idBadgeText}>MEMBER ID: {member.memberId}</Text>
           </View>
         </View>
 
@@ -94,7 +82,7 @@ export default function ProfileScreen() {
         <View style={[styles.banner, styles.bannerRed]}>
           <View style={styles.bannerLeft}>
             <Text style={styles.bannerTitle}>Affiliation</Text>
-            <Text style={styles.bannerYear}>2026</Text>
+            <Text style={styles.bannerYear}>{member.currentYear}</Text>
           </View>
           <View style={styles.statusPill}>
             <Text style={styles.statusText}>{member.affiliationStatus}</Text>
@@ -112,7 +100,7 @@ export default function ProfileScreen() {
         <View style={[styles.banner, styles.bannerGreen]}>
           <View style={styles.bannerLeft}>
             <Text style={styles.bannerTitle}>Dues</Text>
-            <Text style={styles.bannerYear}>2026</Text>
+            <Text style={styles.bannerYear}>{member.currentYear}</Text>
           </View>
           <View style={styles.statusPill}>
             <Text style={styles.statusText}>{member.duesStatus}</Text>

@@ -8,13 +8,16 @@ import {
   Image,
   SafeAreaView,
   StatusBar,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { ArrowLeft, Heart, Award, Users } from "lucide-react-native";
-import { scaleFont } from "@/components/scale";
+import { useImpactStories } from "@/hooks/useNews";
 
 export default function ImpactStoriesScreen() {
   const router = useRouter();
+  const { stories, isLoading, isRefreshing, error, refresh } = useImpactStories(20);
 
   const impactStats = [
     { label: "Lives Impacted", value: "1,200+", icon: Users, color: "#34C759" },
@@ -22,38 +25,10 @@ export default function ImpactStoriesScreen() {
     { label: "Donations", value: "$25K+", icon: Heart, color: "#FF3B30" },
   ];
 
-  const stories = [
-    {
-      id: "1",
-      title: "Sarah's Journey: Empowering the Next Generation",
-      description: "How the YMCA youth scholarship program provided Sarah with the coaching and mentorship she needed to succeed in school and sport.",
-      image: "https://picsum.photos/seed/impact_sarah/600/350",
-      date: "June 15, 2026",
-      likes: 56,
-    },
-    {
-      id: "2",
-      title: "Healthy Aging: Seniors Finding Joy in Water Aerobics",
-      description: "For Albert and Martha, the YMCA aquatic center became more than a fitness center—it became a vital place for connection, health, and laughter.",
-      image: "https://picsum.photos/seed/impact_seniors/600/350",
-      date: "June 10, 2026",
-      likes: 84,
-    },
-    {
-      id: "3",
-      title: "Green Shoots: Community Gardens Feeding Families",
-      description: "Our backyard garden initiative grew over 500 lbs of fresh vegetables this season, all donated directly to local member families in need.",
-      image: "https://picsum.photos/seed/impact_garden/600/350",
-      date: "June 01, 2026",
-      likes: 112,
-    },
-  ];
-
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
 
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -66,8 +41,13 @@ export default function ImpactStoriesScreen() {
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* Impact Stats Banner */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={refresh} />
+        }
+      >
         <Text style={styles.sectionTitle}>Our 2026 Footprint</Text>
         <View style={styles.statsRow}>
           {impactStats.map((stat, idx) => {
@@ -84,28 +64,49 @@ export default function ImpactStoriesScreen() {
           })}
         </View>
 
-        {/* Stories List */}
         <Text style={styles.sectionTitle}>Featured Stories</Text>
-        {stories.map((story) => (
-          <View key={story.id} style={styles.storyCard}>
-            <Image source={{ uri: story.image }} style={styles.storyImage} />
-            <View style={styles.storyInfo}>
-              <Text style={styles.storyDate}>{story.date}</Text>
-              <Text style={styles.storyTitle}>{story.title}</Text>
-              <Text style={styles.storyDescription}>{story.description}</Text>
-              
-              <View style={styles.storyFooter}>
-                <TouchableOpacity style={styles.likeButton} activeOpacity={0.7}>
-                  <Heart size={16} color="#FF3B30" fill="#FF3B30" />
-                  <Text style={styles.likeText}>{story.likes} Likes</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.readButton} activeOpacity={0.7}>
-                  <Text style={styles.readButtonText}>Read Story</Text>
-                </TouchableOpacity>
+
+        {isLoading ? (
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator size="large" color="#FF3B30" />
+          </View>
+        ) : stories.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <Text style={styles.emptyText}>
+              {error || "No impact stories published yet."}
+            </Text>
+            {error ? (
+              <TouchableOpacity onPress={refresh} style={styles.retryButton}>
+                <Text style={styles.retryText}>Try again</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        ) : (
+          stories.map((story) => (
+            <View key={story.id} style={styles.storyCard}>
+              <Image source={{ uri: story.image }} style={styles.storyImage} />
+              <View style={styles.storyInfo}>
+                <Text style={styles.storyDate}>{story.date}</Text>
+                <Text style={styles.storyTitle}>{story.title}</Text>
+                <Text style={styles.storyDescription}>{story.summary}</Text>
+
+                <View style={styles.storyFooter}>
+                  <TouchableOpacity style={styles.likeButton} activeOpacity={0.7}>
+                    <Heart size={16} color="#FF3B30" fill="#FF3B30" />
+                    <Text style={styles.likeText}>{story.likes} Likes</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.readButton}
+                    activeOpacity={0.7}
+                    onPress={() => router.push(`/news/${story.id}`)}
+                  >
+                    <Text style={styles.readButtonText}>Read Story</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
-          </View>
-        ))}
+          ))
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -180,6 +181,32 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     marginTop: 2,
     textAlign: "center",
+  },
+  loadingWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+  },
+  emptyWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+    gap: 12,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: "#888",
+    textAlign: "center",
+  },
+  retryButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: "#000",
+  },
+  retryText: {
+    color: "#fff",
+    fontSize: 14,
   },
   storyCard: {
     backgroundColor: "#FFFFFF",

@@ -1,5 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import {
+  ActivityIndicator,
+  RefreshControl,
   StyleSheet,
   Text,
   View,
@@ -9,15 +11,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import {
-  ChevronLeft,
-  CheckCheck,
-  CreditCard,
-  CalendarDays,
-  Award,
-  Megaphone,
-  Dumbbell,
-} from "lucide-react-native";
+import { ChevronLeft, CheckCheck } from "lucide-react-native";
+import { useNotifications } from "@/hooks/useNotifications";
 
 const COLORS = {
   bg: "#FFFFFF",
@@ -35,58 +30,11 @@ const COLORS = {
 
 const FILTERS = ["All", "New", "Old", "Unread"];
 
-const NOTIFICATIONS = [
-  {
-    id: "n1",
-    section: "Today",
-    Icon: CreditCard,
-    title: "Membership Renewal",
-    date: "9:41 AM",
-    body: "Your Gold membership has been renewed successfully for another year.",
-    unread: true,
-  },
-  {
-    id: "n2",
-    section: "Today",
-    Icon: CalendarDays,
-    title: "Upcoming Event",
-    date: "8:15 AM",
-    body: "Community Cleanup Drive starts this Saturday at 8:00 AM. Tap to RSVP.",
-    unread: true,
-  },
-  {
-    id: "n3",
-    section: "Today",
-    Icon: Award,
-    title: "Points Earned",
-    date: "7:02 AM",
-    body: "You earned 250 points for attending the leadership workshop.",
-    unread: false,
-  },
-  {
-    id: "n4",
-    section: "Today",
-    Icon: Megaphone,
-    title: "New Announcement",
-    date: "6:30 AM",
-    body: "The Koforidua branch will host its annual youth conference next month.",
-    unread: false,
-  },
-  {
-    id: "n5",
-    section: "Yesterday",
-    Icon: Dumbbell,
-    title: "Class Booking",
-    date: "5:20 PM",
-    body: "Your spot in the Beginners' strength class (legs & shoulders) is confirmed.",
-    unread: false,
-  },
-];
-
-function NotificationCard({ item }) {
+function NotificationCard({ item, onPress }) {
   const Icon = item.Icon;
+
   return (
-    <TouchableOpacity style={styles.card} activeOpacity={0.85}>
+    <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={onPress}>
       <View style={styles.avatar}>
         <Icon size={20} color="#FFFFFF" strokeWidth={2} />
       </View>
@@ -111,28 +59,20 @@ function NotificationCard({ item }) {
 export default function NotificationsScreen() {
   const router = useRouter();
   const [activeFilter, setActiveFilter] = useState("All");
-
-  const sections = useMemo(() => {
-    const filtered = NOTIFICATIONS.filter((n) => {
-      if (activeFilter === "New" || activeFilter === "Unread") return n.unread;
-      if (activeFilter === "Old") return !n.unread;
-      return true;
-    });
-
-    const order = ["Today", "Yesterday"];
-    return order
-      .map((label) => ({
-        label,
-        items: filtered.filter((n) => n.section === label),
-      }))
-      .filter((s) => s.items.length > 0);
-  }, [activeFilter]);
+  const {
+    sections,
+    isLoading,
+    isRefreshing,
+    error,
+    refresh,
+    markAsRead,
+    markAllAsRead,
+  } = useNotifications(activeFilter);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <StatusBar barStyle="dark-content" />
 
-      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <TouchableOpacity
@@ -143,23 +83,27 @@ export default function NotificationsScreen() {
             <ChevronLeft size={22} color="#636268" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Notifications</Text>
-          <TouchableOpacity style={styles.iconBox} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.iconBox}
+            activeOpacity={0.7}
+            onPress={markAllAsRead}
+          >
             <CheckCheck size={20} color="#636268" />
           </TouchableOpacity>
         </View>
 
         <View style={styles.filterRow}>
-          {FILTERS.map((f) => {
-            const active = f === activeFilter;
+          {FILTERS.map((filter) => {
+            const active = filter === activeFilter;
             return (
               <TouchableOpacity
-                key={f}
+                key={filter}
                 style={[styles.pill, active ? styles.pillActive : styles.pillInactive]}
                 activeOpacity={0.8}
-                onPress={() => setActiveFilter(f)}
+                onPress={() => setActiveFilter(filter)}
               >
                 <Text style={active ? styles.pillTextActive : styles.pillText}>
-                  {f}
+                  {filter}
                 </Text>
               </TouchableOpacity>
             );
@@ -167,25 +111,52 @@ export default function NotificationsScreen() {
         </View>
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {sections.map((section) => (
-          <View key={section.label} style={styles.section}>
-            <Text style={styles.sectionLabel}>{section.label}</Text>
-            {section.items.map((item) => (
-              <NotificationCard key={item.id} item={item} />
-            ))}
-          </View>
-        ))}
+      {isLoading ? (
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color="#1D3108" />
+        </View>
+      ) : (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl refreshing={isRefreshing} onRefresh={refresh} />
+          }
+        >
+          {error ? (
+            <View style={styles.empty}>
+              <Text style={styles.emptyText}>{error}</Text>
+              <TouchableOpacity onPress={refresh} style={styles.retryButton}>
+                <Text style={styles.retryText}>Try again</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
 
-        {sections.length === 0 && (
-          <View style={styles.empty}>
-            <Text style={styles.emptyText}>No notifications here.</Text>
-          </View>
-        )}
-      </ScrollView>
+          {!error &&
+            sections.map((section) => (
+              <View key={section.label} style={styles.section}>
+                <Text style={styles.sectionLabel}>{section.label}</Text>
+                {section.items.map((item) => (
+                  <NotificationCard
+                    key={item.id}
+                    item={item}
+                    onPress={() => {
+                      if (item.unread) {
+                        markAsRead(item.id);
+                      }
+                    }}
+                  />
+                ))}
+              </View>
+            ))}
+
+          {!error && sections.length === 0 && (
+            <View style={styles.empty}>
+              <Text style={styles.emptyText}>No notifications here.</Text>
+            </View>
+          )}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -195,8 +166,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.bg,
   },
-
-  /* Header */
   header: {
     backgroundColor: COLORS.headerBg,
     borderBottomWidth: 1,
@@ -254,8 +223,11 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#FFFFFF",
   },
-
-  /* Content */
+  loadingWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   scrollContent: {
     paddingHorizontal: 24,
     paddingTop: 20,
@@ -271,8 +243,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 12,
   },
-
-  /* Card */
   card: {
     flexDirection: "row",
     backgroundColor: COLORS.cardBg,
@@ -325,14 +295,24 @@ const styles = StyleSheet.create({
     color: COLORS.body,
     lineHeight: 20,
   },
-
-  /* Empty */
   empty: {
     paddingTop: 60,
     alignItems: "center",
+    gap: 12,
   },
   emptyText: {
     fontSize: 14,
     color: COLORS.sectionLabel,
+    textAlign: "center",
+  },
+  retryButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: "#000",
+  },
+  retryText: {
+    color: "#fff",
+    fontSize: 14,
   },
 });

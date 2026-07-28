@@ -16,8 +16,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { Bell, ChevronRight, Star, MapPin, Crown } from "lucide-react-native";
-import { useAuthStore } from "@/stores/useAuthStore";
-import { mapAuthToProfile } from "@/lib/userProfile";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { useUnreadNotificationCount } from "@/hooks/useNotifications";
+import { useImpactStories, usePublishedNewsCount } from "@/hooks/useNews";
+import { formatNewsUpdatesLabel } from "@/lib/newsUtils";
 
 const DARK = "#1D3108";
 const SUBTLE = "#4B5563";
@@ -34,19 +36,10 @@ const GREETING_H = 34;
 
 export default function HomeScreen() {
   const router = useRouter();
-  const fetchProfile = useAuthStore((state) => state.fetchProfile);
-  const user = useAuthStore((state) => state.user);
-  const phone = useAuthStore((state) => state.phone);
-  const email = useAuthStore((state) => state.email);
-
-  const profile = useMemo(
-    () => mapAuthToProfile({ user, phone, email }),
-    [user, phone, email]
-  );
-
-  useEffect(() => {
-    fetchProfile();
-  }, [fetchProfile]);
+  const profile = useUserProfile();
+  const unreadCount = useUnreadNotificationCount();
+  const { stories: impactStories } = useImpactStories(5);
+  const newsCount = usePublishedNewsCount();
 
   const branchLabel =
     profile.branch === "—" ? "Your Branch" : `${profile.branch} Branch`;
@@ -97,27 +90,6 @@ export default function HomeScreen() {
     outputRange: [-GLARE_W, FILL_W],
   });
 
-  const impactStories = [
-    {
-      id: "food",
-      title: "Food Festival",
-      desc: "Discover international street food, cooking demos, and live music performances.",
-      image: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=600&q=80",
-    },
-    {
-      id: "fashion",
-      title: "Fashion Week",
-      desc: "Experience runway shows featuring local and international fashion brands and designers.",
-      image: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?auto=format&fit=crop&w=600&q=80",
-    },
-    {
-      id: "sports",
-      title: "Sports Gala",
-      desc: "Cheer on members competing across athletics, basketball, and community games.",
-      image: "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=600&q=80",
-    },
-  ];
-
   const prominentProfiles = [
     { id: "chatime", name: "Chatime", logo: require("@/assets/logos/chatime.png") },
     { id: "informa", name: "Informa", logo: require("@/assets/logos/informa.png") },
@@ -126,36 +98,43 @@ export default function HomeScreen() {
     { id: "starbucks", name: "Starbucks", logo: require("@/assets/logos/starbucks.png") },
   ];
 
-  const categories = [
-    {
-      id: "news",
-      title: "News & Updates",
-      subtitle: "5 New Updates",
-      image: "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=600&q=80",
-      route: "/news",
-    },
-    {
-      id: "connect",
-      title: "Connect",
-      subtitle: "2 New Connections",
-      image: "https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&w=600&q=80",
-      route: "/connect",
-    },
-    {
-      id: "programs",
-      title: "Programs & Activities",
-      subtitle: "2 New Programs",
-      image: "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=600&q=80",
-      route: "/programs",
-    },
-    {
-      id: "surveys",
-      title: "Surveys & Feedback",
-      subtitle: "2 New Surveys",
-      image: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=600&q=80",
-      route: "/surveys",
-    },
-  ];
+  const categories = useMemo(
+    () => [
+      {
+        id: "news",
+        title: "News & Updates",
+        subtitle: formatNewsUpdatesLabel(newsCount),
+        image:
+          "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=600&q=80",
+        route: "/news",
+      },
+      {
+        id: "connect",
+        title: "Connect",
+        subtitle: "2 New Connections",
+        image:
+          "https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&w=600&q=80",
+        route: "/connect",
+      },
+      {
+        id: "programs",
+        title: "Programs & Activities",
+        subtitle: "2 New Programs",
+        image:
+          "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=600&q=80",
+        route: "/programs",
+      },
+      {
+        id: "surveys",
+        title: "Surveys & Feedback",
+        subtitle: "2 New Surveys",
+        image:
+          "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=600&q=80",
+        route: "/surveys",
+      },
+    ],
+    [newsCount]
+  );
 
   const promotions = [
     {
@@ -177,13 +156,13 @@ export default function HomeScreen() {
       key={item.id}
       style={styles.storyCard}
       activeOpacity={0.9}
-      onPress={() => router.push("/impact")}
+      onPress={() => router.push(`/news/${item.id}`)}
     >
       <Image source={{ uri: item.image }} style={styles.storyImage} />
       <View style={styles.storyBody}>
         <Text style={styles.storyTitle}>{item.title}</Text>
         <Text style={styles.storyDesc} numberOfLines={2}>
-          {item.desc}
+          {item.summary}
         </Text>
       </View>
     </TouchableOpacity>
@@ -206,9 +185,13 @@ export default function HomeScreen() {
             onPress={() => router.push("/notifications")}
           >
             <Bell size={24} color="#111" strokeWidth={2} fill="#111" />
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>1</Text>
-            </View>
+            {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -292,25 +275,28 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Impact Stories */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Impact Stories</Text>
-          <TouchableOpacity
-            style={styles.viewAll}
-            activeOpacity={0.7}
-            onPress={() => router.push("/impact")}
-          >
-            <Text style={styles.viewAllText}>View All</Text>
-            <ChevronRight size={14} color={DARK} strokeWidth={2} />
-          </TouchableOpacity>
-        </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.hScroll}
-        >
-          {impactStories.map(renderStoryCard)}
-        </ScrollView>
+        {impactStories.length > 0 ? (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Impact Stories</Text>
+              <TouchableOpacity
+                style={styles.viewAll}
+                activeOpacity={0.7}
+                onPress={() => router.push("/impact")}
+              >
+                <Text style={styles.viewAllText}>View All</Text>
+                <ChevronRight size={14} color={DARK} strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.hScroll}
+            >
+              {impactStories.map(renderStoryCard)}
+            </ScrollView>
+          </>
+        ) : null}
 
         {/* Prominent Profiles */}
         <View style={[styles.sectionHeader, { marginTop: 26 }]}>
