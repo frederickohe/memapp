@@ -6,6 +6,7 @@ const SOCIAL_MAP = {
   instagram: { glyph: "instagram", color: "#E4405F" },
   twitter: { glyph: "twitter", color: "#1DA1F2" },
   facebook: { glyph: "facebook-square", color: "#1877F2" },
+  linkedin: { glyph: "linkedin-square", color: "#0A66C2" },
 };
 
 export function SocialIcon({ name, size = 22 }) {

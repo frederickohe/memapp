@@ -6,7 +6,6 @@ import {
   View,
   FlatList,
   TouchableOpacity,
-  Image,
   SafeAreaView,
   StatusBar,
   ScrollView,
@@ -23,6 +22,7 @@ import {
 } from "lucide-react-native";
 import { useNews } from "@/hooks/useNews";
 import { formatTimeAgo } from "@/lib/newsUtils";
+import FeedCard, { feedCardStyles } from "@/components/FeedCard";
 
 const NEWS_FILTERS = ["All", "Projects", "Activities"];
 
@@ -37,61 +37,42 @@ export default function NewsFeedScreen() {
 
   const renderNewsItem = ({ item }) => {
     return (
-      <TouchableOpacity
-        style={styles.newsCard}
-        activeOpacity={0.95}
+      <FeedCard
+        image={item.image}
+        category={item.category}
+        timeLabel={item.timeAgo}
+        title={item.title}
+        summary={item.summary}
         onPress={() => router.push(`/news/${item.id}`)}
-      >
-        <View style={styles.cardHeader}>
-          <View style={styles.categoryRow}>
-            <View
-              style={[
-                styles.categoryBadge,
-                item.category === "Projects"
-                  ? styles.badgeProjects
-                  : styles.badgeActivities,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.categoryBadgeText,
-                  item.category === "Projects"
-                    ? styles.textProjects
-                    : styles.textActivities,
-                ]}
-              >
-                {item.category}
-              </Text>
+        footer={
+          <>
+            <View style={feedCardStyles.footerLeft}>
+              <TouchableOpacity style={feedCardStyles.statButton} activeOpacity={0.7}>
+                <ThumbsUp size={16} color="#666" strokeWidth={2} />
+                <Text style={feedCardStyles.statText}>{item.likes}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={feedCardStyles.statButton} activeOpacity={0.7}>
+                <MessageSquare size={16} color="#666" strokeWidth={2} />
+                <Text style={feedCardStyles.statText}>{item.comments}</Text>
+              </TouchableOpacity>
             </View>
-            <Text style={styles.timeAgoText}>{item.timeAgo}</Text>
-          </View>
-          <Text style={styles.postTitle}>{item.title}</Text>
-          <Text style={styles.postSummary}>{item.summary}</Text>
-        </View>
-
-        <Image source={{ uri: item.image }} style={styles.postImage} />
-
-        <View style={styles.statsRow}>
-          <View style={styles.leftStats}>
-            <TouchableOpacity style={styles.statButton} activeOpacity={0.7}>
-              <ThumbsUp size={16} color="#666" strokeWidth={2} />
-              <Text style={styles.statText}>{item.likes}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.statButton} activeOpacity={0.7}>
-              <MessageSquare size={16} color="#666" strokeWidth={2} />
-              <Text style={styles.statText}>{item.comments}</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.rightStats}>
-            <TouchableOpacity style={styles.actionIconButton} activeOpacity={0.7}>
-              <Bookmark size={16} color="#666" strokeWidth={2} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionIconButton} activeOpacity={0.7}>
-              <Share2 size={16} color="#666" strokeWidth={2} />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </TouchableOpacity>
+            <View style={feedCardStyles.footerRight}>
+              <TouchableOpacity
+                style={feedCardStyles.actionIconButton}
+                activeOpacity={0.7}
+              >
+                <Bookmark size={16} color="#666" strokeWidth={2} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={feedCardStyles.actionIconButton}
+                activeOpacity={0.7}
+              >
+                <Share2 size={16} color="#666" strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+          </>
+        }
+      />
     );
   };
 
@@ -173,6 +154,7 @@ export default function NewsFeedScreen() {
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
+          ItemSeparatorComponent={() => <View style={feedCardStyles.separator} />}
           refreshing={isRefreshing}
           onRefresh={refresh}
           ListEmptyComponent={
@@ -276,101 +258,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   listContent: {
-    paddingHorizontal: 20,
     paddingBottom: 30,
-  },
-  newsCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#F0F0F0",
-    marginBottom: 20,
-    overflow: "hidden",
-  },
-  cardHeader: {
-    padding: 16,
-  },
-  categoryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  categoryBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  badgeProjects: {
-    backgroundColor: "#E5F6FF",
-  },
-  badgeActivities: {
-    backgroundColor: "#EAFBF0",
-  },
-  categoryBadgeText: {
-    fontSize: 11,
-    fontWeight: "500",
-  },
-  textProjects: {
-    color: "#007AFF",
-  },
-  textActivities: {
-    color: "#34C759",
-  },
-  timeAgoText: {
-    fontSize: 11,
-    color: "#888",
-    fontWeight: "500",
-  },
-  postTitle: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#111",
-    lineHeight: 22,
-    marginBottom: 6,
-  },
-  postSummary: {
-    fontSize: 13,
-    color: "#666",
-    lineHeight: 18,
-  },
-  postImage: {
-    width: "100%",
-    height: 200,
-    backgroundColor: "#F0F0F0",
-  },
-  statsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#F5F5F7",
-  },
-  leftStats: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  statButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginRight: 16,
-    paddingVertical: 4,
-  },
-  statText: {
-    fontSize: 12,
-    color: "#666",
-    fontWeight: "400",
-    marginLeft: 6,
-  },
-  rightStats: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  actionIconButton: {
-    padding: 6,
-    marginLeft: 10,
   },
   emptyContainer: {
     alignItems: "center",

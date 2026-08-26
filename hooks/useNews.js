@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { getImpactStories, getNewsById, getPublishedNews } from "@/lib/api/news";
+import { getImpactStories, getNewsById, getPublishedNews, getUpcomingEvents } from "@/lib/api/news";
 import {
   applyClientFilter,
   filterToApiParams,
@@ -139,16 +139,8 @@ export function useUpcomingEvents(limit = 5) {
   const loadEvents = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await getPublishedNews(
-        {
-          page: 1,
-          size: Math.min(Math.max(limit, 1), 20),
-          sort_by: "published_at",
-          content_type: "EVENT",
-        },
-        token
-      );
-      const items = (response?.items || []).map(mapNewsItem);
+      const response = await getUpcomingEvents(limit, token);
+      const items = normalizeImpactStoriesResponse(response).map(mapNewsItem);
       setEvents(items);
     } catch (err) {
       if (__DEV__) {
@@ -225,12 +217,17 @@ export function useLatestNews(limit = 5) {
       const response = await getPublishedNews(
         {
           page: 1,
-          size: Math.min(Math.max(limit, 1), 20),
+          size: 20,
           sort_by: "published_at",
         },
         token
       );
-      setArticles((response?.items || []).map(mapNewsItem));
+      setArticles(
+        (response?.items || [])
+          .map(mapNewsItem)
+          .filter((item) => !item.isImpactStory)
+          .slice(0, limit)
+      );
     } catch (err) {
       if (__DEV__) {
         console.log("[news] latest news error", err);

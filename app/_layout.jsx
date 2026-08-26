@@ -100,6 +100,7 @@ export default function RootLayout() {
           />
           <Stack.Screen name="notifications" />
           <Stack.Screen name="impact" />
+          <Stack.Screen name="social" />
           <Stack.Screen name="connect" />
           <Stack.Screen name="connect-user" />
           <Stack.Screen name="connect-list" />

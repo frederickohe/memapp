@@ -19,6 +19,8 @@ import { Bell, ChevronRight, Star, MapPin, Crown } from "lucide-react-native";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useUnreadNotificationCount } from "@/hooks/useNotifications";
 import { useImpactStories, useLatestNews, usePublishedNewsCount } from "@/hooks/useNews";
+import { usePublishedProgramsCount } from "@/hooks/usePrograms";
+import { useOpenSurveysCount } from "@/hooks/useSurveys";
 import { formatNewsUpdatesLabel } from "@/lib/newsUtils";
 
 const DARK = "#1D3108";
@@ -84,6 +86,8 @@ export default function HomeScreen() {
   const { stories: impactStories } = useImpactStories(5);
   const { articles: latestNews } = useLatestNews(5);
   const newsCount = usePublishedNewsCount();
+  const programsCount = usePublishedProgramsCount();
+  const surveysCount = useOpenSurveysCount();
 
   const stories = impactStories.length > 0 ? impactStories : FALLBACK_STORIES;
   const newsItems = latestNews.length > 0 ? latestNews : FALLBACK_NEWS;
@@ -157,16 +161,21 @@ export default function HomeScreen() {
       },
       {
         id: "connect",
-        title: "Connect",
-        subtitle: "2 New Connections",
+        title: "Y Social",
+        subtitle: "Posts & impact",
         image:
-          "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&w=800&q=80",
-        route: "/connect",
+          "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=800&q=80",
+        route: "/social",
       },
       {
         id: "programs",
         title: "Programs & Activities",
-        subtitle: "2 New Programs",
+        subtitle:
+          programsCount === 0
+            ? "No programs yet"
+            : programsCount === 1
+              ? "1 Program"
+              : `${programsCount} Programs`,
         image:
           "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80",
         route: "/programs",
@@ -174,13 +183,18 @@ export default function HomeScreen() {
       {
         id: "surveys",
         title: "Surveys & Feedback",
-        subtitle: "2 New Surveys",
+        subtitle:
+          surveysCount === 0
+            ? "No surveys yet"
+            : surveysCount === 1
+              ? "1 Survey"
+              : `${surveysCount} Surveys`,
         image:
           "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=800&q=80",
         route: "/surveys",
       },
     ],
-    [newsCount]
+    [newsCount, programsCount, surveysCount]
   );
 
   const openCard = (item) => {
