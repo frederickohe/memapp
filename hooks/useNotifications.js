@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   getNotifications,
+  getUnreadNotificationCount,
   markAllNotificationsRead,
   markNotificationRead,
 } from "@/lib/api/notifications";
@@ -122,14 +123,7 @@ export function useUnreadNotificationCount() {
     }
 
     try {
-      const params = { page: 1, size: 1, status: "UNREAD" };
-      const response = await getNotifications(token, params);
-
-      console.log("[notifications] unread count response", {
-        params,
-        response,
-      });
-
+      const response = await getUnreadNotificationCount(token);
       setCount(response?.total ?? 0);
     } catch (err) {
       console.log("[notifications] unread count error", err);

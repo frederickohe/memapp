@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { ChevronLeft } from "lucide-react-native";
 
 const { width } = Dimensions.get("window");
 
@@ -23,6 +24,22 @@ export default function ConnectEntranceScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <StatusBar barStyle="dark-content" />
+
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.iconBtn}
+          activeOpacity={0.7}
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace("/(tabs)");
+            }
+          }}
+        >
+          <ChevronLeft size={20} color="#111" />
+        </TouchableOpacity>
+      </View>
 
       <ScrollView
         contentContainerStyle={styles.scroll}
@@ -75,6 +92,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
+  },
+  header: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    alignItems: "flex-start",
+  },
+  iconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: "#F4F4F6",
+    alignItems: "center",
+    justifyContent: "center",
   },
   scroll: {
     flexGrow: 1,

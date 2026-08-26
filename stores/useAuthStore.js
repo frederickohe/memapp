@@ -6,7 +6,6 @@ import {
   signUp as signUpRequest,
   sendOtp as sendOtpRequest,
   verifyOtp as verifyOtpRequest,
-  verifyAccountOtp,
   signOut as signOutRequest,
 } from "@/lib/api/auth";
 import { buildSignupPayload } from "@/lib/signupPayload";
@@ -69,6 +68,7 @@ export const useAuthStore = create(
       email: "",
       otp: "",
       otpVerified: false,
+      signupInProgress: false,
       onboardingComplete: false,
       isLoading: false,
       isProfileLoading: false,
@@ -80,22 +80,31 @@ export const useAuthStore = create(
       setPhone: (phone) => set({ phone }),
       setEmail: (email) => set({ email }),
       setOtp: (otp) => set({ otp }),
+      setSignupInProgress: (signupInProgress) => set({ signupInProgress }),
       clearError: () => set({ error: null }),
 
       signIn: async (email, password) => {
         set({ isLoading: true, error: null, profileLoaded: false });
         try {
-          const response = await signInRequest({ email, password });
+          const response = await signInRequest({
+            email: String(email).trim().toLowerCase(),
+            password,
+          });
           const auth = extractAuthPayload(response);
+          if (!auth.token) {
+            throw new Error("Sign in succeeded without a session token");
+          }
+          const user = await resolveUser(auth.token, auth.user);
 
           set({
             token: auth.token,
             refreshToken: auth.refreshToken,
-            user: auth.user,
-            email,
-            phone: get().phone,
+            user,
+            email: String(email).trim().toLowerCase(),
+            phone: user?.phone_number || get().phone,
             authIntent: null,
             otpVerified: false,
+            signupInProgress: false,
             onboardingComplete: true,
             isLoading: false,
           });
@@ -144,19 +153,31 @@ export const useAuthStore = create(
       },
 
       signUp: async (form) => {
-        const { phone, email, otp } = get();
+        const { phone, email } = get();
         set({ isLoading: true, error: null, profileLoaded: false });
 
         try {
           const payload = buildSignupPayload(form, { phone, email });
           const signupResponse = await signUpRequest(payload);
+          let auth = extractAuthPayload(signupResponse);
 
-          if (phone && otp) {
-            await verifyAccountOtp({ phone, otp });
+          // Older backends created the user without issuing a session.
+          if (!auth.token && payload.email && payload.password) {
+            const signinResponse = await signInRequest({
+              email: payload.email,
+              password: payload.password,
+            });
+            auth = extractAuthPayload(signinResponse);
           }
 
-          const auth = extractAuthPayload(signupResponse);
+          if (!auth.token) {
+            throw new Error(
+              "Account created, but sign in failed. Please log in with your email and password."
+            );
+          }
+
           const fallbackUser = auth.user ?? {
+            id: signupResponse?.user_id,
             fullname: payload.fullname,
             email: payload.email,
             phone_number: payload.phone_number,
@@ -177,12 +198,13 @@ export const useAuthStore = create(
             token: auth.token,
             refreshToken: auth.refreshToken,
             user,
-            email: user?.email || email,
-            phone: user?.phone_number || phone,
+            email: user?.email || payload.email || email,
+            phone: user?.phone_number || payload.phone_number || phone,
             authIntent: null,
             otpVerified: false,
             isLoading: false,
-            onboardingComplete: true,
+            signupInProgress: true,
+            onboardingComplete: false,
           });
 
           logAuthToken(auth.token, "signUp");
@@ -197,7 +219,8 @@ export const useAuthStore = create(
         }
       },
 
-      completeOnboarding: () => set({ onboardingComplete: true }),
+      completeOnboarding: () =>
+        set({ onboardingComplete: true, signupInProgress: false }),
 
       fetchProfile: async () => {
         const { token, user: currentUser } = get();
@@ -248,6 +271,7 @@ export const useAuthStore = create(
           email: "",
           otp: "",
           otpVerified: false,
+          signupInProgress: false,
           onboardingComplete: false,
           isLoading: false,
           isProfileLoading: false,
@@ -269,6 +293,7 @@ export const useAuthStore = create(
         phone: state.phone,
         email: state.email,
         otpVerified: state.otpVerified,
+        signupInProgress: state.signupInProgress,
         onboardingComplete: state.onboardingComplete,
         profileLoaded: state.profileLoaded,
       }),

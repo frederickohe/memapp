@@ -12,6 +12,7 @@ export function useAuthAccess() {
   const email = useAuthStore((state) => state.email);
   const onboardingComplete = useAuthStore((state) => state.onboardingComplete);
   const otpVerified = useAuthStore((state) => state.otpVerified);
+  const signupInProgress = useAuthStore((state) => state.signupInProgress);
 
   useEffect(() => {
     if (useAuthStore.persist.hasHydrated()) {
@@ -22,11 +23,19 @@ export function useAuthAccess() {
     return useAuthStore.persist.onFinishHydration(() => setHydrated(true));
   }, []);
 
-  const state = { token, user, email, onboardingComplete, otpVerified };
+  const state = {
+    token,
+    user,
+    email,
+    onboardingComplete,
+    otpVerified,
+    signupInProgress,
+  };
   const authenticated = isAuthenticated(state);
   const canAccessApp = authenticated && onboardingComplete;
   const canAccessOnboarding =
-    !onboardingComplete && (otpVerified || authenticated);
+    !onboardingComplete &&
+    (otpVerified || authenticated || signupInProgress);
   const canAccessAuth = !canAccessApp && !canAccessOnboarding;
 
   return {

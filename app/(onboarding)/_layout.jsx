@@ -13,7 +13,12 @@ export default function OnboardingLayout() {
     >
       <Stack.Screen name="welcome" />
       <Stack.Screen name="stepper" />
+      <Stack.Screen
+        name="processing"
+        options={{ gestureEnabled: false }}
+      />
       <Stack.Screen name="success" />
+      <Stack.Screen name="entrance" />
     </Stack>
   );
 }

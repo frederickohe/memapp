@@ -8,7 +8,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { OnboardingButton } from "@/components/OnboardingFormComponents";
-import { resetNavigationStack } from "@/lib/authNavigation";
 
 const COLORS = {
   bg: "#E9E7FF",
@@ -59,7 +58,6 @@ export default function ApplyVolunteerHoursSuccessScreen() {
   const activityLabel = activity?.trim() || "Volunteer activity";
 
   const handleBackHome = () => {
-    resetNavigationStack(router);
     router.replace("/(tabs)");
   };
 

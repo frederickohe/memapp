@@ -1,32 +1,48 @@
+import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
+  Alert,
   Animated,
+  BackHandler,
   Easing,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Alert,
-  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { SvgXml } from "react-native-svg";
+
+import { ICON_BACK } from "@/components/authIcons";
+import { SignupButton } from "@/components/SignupButton";
+import { SignupFormCard } from "@/components/SignupFormCard";
+import { SignupVideoCard } from "@/components/SignupVideoCard";
 import {
-  FormField,
-  ConsentRow,
-  OnboardingButton,
-} from "@/components/OnboardingFormComponents";
-import { useAuthStore } from "@/stores/useAuthStore";
+  isValidEmail,
+  MIN_PASSWORD_LENGTH,
+} from "@/lib/authValidation";
+import { useSignupStore } from "@/stores/useSignupStore";
 
-const GENDER_IMAGES = {
-  male: require("@/assets/images/gender/male.png"),
-  female: require("@/assets/images/gender/female.png"),
-};
+const GENDER_MALE = require("@/assets/images/signup/gender-male.png");
+const GENDER_FEMALE = require("@/assets/images/signup/gender-female.png");
 
-// ─── Step definitions ────────────────────────────────────────
+const NATIONALITIES = [
+  "Ghanaian",
+  "Nigerian",
+  "American",
+  "British",
+  "Other",
+];
+
+const MEMBERSHIP_TYPES = ["Student", "Individual", "Family", "Corporate"];
+
+const BRANCHES = ["Madina", "Accra", "Kumasi", "Tamale", "Other"];
+
 const STEPS = [
   { key: "personal", title: "Personal Information" },
   { key: "social", title: "Social Handles" },
@@ -37,68 +53,23 @@ const STEPS = [
   { key: "secure", title: "Secure Your Account" },
 ];
 
-// ─── Main screen ─────────────────────────────────────────────
 export default function OnboardingStepperScreen() {
   const router = useRouter();
-  const signUp = useAuthStore((state) => state.signUp);
-  const isLoading = useAuthStore((state) => state.isLoading);
-  const storedPhone = useAuthStore((state) => state.phone);
-  const storedEmail = useAuthStore((state) => state.email);
+  const form = useSignupStore();
+  const setField = useSignupStore((state) => state.setField);
+  const toggle = useSignupStore((state) => state.toggle);
   const scrollRef = useRef(null);
   const [currentStep, setCurrentStep] = useState(0);
 
-  // Animation values
   const contentOpacity = useRef(new Animated.Value(1)).current;
   const contentSlide = useRef(new Animated.Value(0)).current;
   const titleOpacity = useRef(new Animated.Value(1)).current;
 
-  // ─── Form data (persisted across steps) ──────────────────
-  const [form, setForm] = useState({
-    // Step 1
-    fullName: "",
-    nationality: "",
-    dateOfBirth: "",
-    gender: "",
-    // Step 2
-    facebook: "",
-    instagram: "",
-    linkedin: "",
-    // Step 3
-    phone: storedPhone,
-    email: storedEmail,
-    address: "",
-    // Step 4
-    membershipType: "",
-    numberOfBonds: "",
-    membershipId: "",
-    skills: "",
-    // Step 5
-    goJointer: "",
-    articularWellbeing: "",
-    educationId: "",
-    // Step 6
-    termsAccepted: false,
-    privacyAccepted: false,
-    photoAccepted: false,
-    notifAccepted: false,
-    // Step 7
-    password: "",
-    confirmPassword: "",
-  });
-
-  const set = (field, value) =>
-    setForm((prev) => ({ ...prev, [field]: value }));
-  const toggle = (field) =>
-    setForm((prev) => ({ ...prev, [field]: !prev[field] }));
-
-
-  // ─── Transition animation ────────────────────────────────
   const animateToStep = (nextStep, direction = "forward") => {
     const isForward = direction === "forward";
     const slideOutTo = isForward ? -12 : 12;
     const slideInFrom = isForward ? 18 : -18;
 
-    // Phase 1: fade + slide current content out
     Animated.parallel([
       Animated.timing(titleOpacity, {
         toValue: 0,
@@ -118,11 +89,8 @@ export default function OnboardingStepperScreen() {
         useNativeDriver: true,
       }),
     ]).start(() => {
-      // Update step
       setCurrentStep(nextStep);
       scrollRef.current?.scrollTo({ y: 0, animated: false });
-
-      // Phase 2: position below/above, then spring into place
       contentSlide.setValue(slideInFrom);
 
       Animated.parallel([
@@ -147,137 +115,130 @@ export default function OnboardingStepperScreen() {
     });
   };
 
-  const handleNext = async () => {
+  const goBackToWelcome = useCallback(() => {
+    router.replace("/(onboarding)/welcome");
+  }, [router]);
+
+  const handleBack = useCallback(() => {
+    if (currentStep > 0) {
+      animateToStep(currentStep - 1, "backward");
+      return true;
+    }
+    goBackToWelcome();
+    return true;
+  }, [currentStep, goBackToWelcome]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        handleBack
+      );
+      return () => subscription.remove();
+    }, [handleBack])
+  );
+
+  const handleNext = () => {
     if (currentStep < STEPS.length - 1) {
       animateToStep(currentStep + 1, "forward");
       return;
     }
 
-    if (!form.password) {
-      Alert.alert("Missing password", "Please enter a password.");
+    if (!form.fullName?.trim()) {
+      Alert.alert("Missing name", "Please enter your full name.");
+      return;
+    }
+
+    if (!isValidEmail(form.email || form.username)) {
+      Alert.alert(
+        "Valid email required",
+        "Enter the email address you will use to sign in."
+      );
+      return;
+    }
+
+    if (!form.password || form.password.length < MIN_PASSWORD_LENGTH) {
+      Alert.alert(
+        "Password too short",
+        `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`
+      );
       return;
     }
 
     if (form.password !== form.confirmPassword) {
-      Alert.alert("Password mismatch", "Password and confirmation do not match.");
+      Alert.alert(
+        "Password mismatch",
+        "Password and confirmation do not match."
+      );
       return;
     }
 
-    const result = await signUp(form);
-    if (result.success) {
-      router.push("/(onboarding)/success");
-    } else {
-      Alert.alert(
-        "Sign up failed",
-        result.error?.message || "Unable to complete sign up. Please try again."
-      );
-    }
+    router.push("/(onboarding)/processing");
   };
 
-  const handleBack = () => {
-    if (currentStep > 0) {
-      animateToStep(currentStep - 1, "backward");
-    }
-  };
-
-  // ─── Step content renderers ──────────────────────────────
   const renderStepContent = () => {
     switch (STEPS[currentStep].key) {
       case "personal":
         return (
           <>
-            <FormField
+            <SignupFormCard
               label="Full Name"
               value={form.fullName}
-              onChangeText={(v) => set("fullName", v)}
-              placeholder="Full Name"
+              onChangeText={(value) => setField("fullName", value)}
+              autoCapitalize="words"
             />
-            <FormField
+            <SignupFormCard
               label="Nationality"
               value={form.nationality}
-              placeholder="Nationality"
-              isDropdown
-              options={["Ghanaian", "Nigerian", "American", "British", "Other"]}
-              onSelect={(v) => set("nationality", v)}
+              options={NATIONALITIES}
+              onSelect={(value) => setField("nationality", value)}
+              showDropdown
             />
-            <FormField
+            <SignupFormCard
               label="Date of Birth"
               value={form.dateOfBirth}
-              onChangeText={(v) => set("dateOfBirth", v)}
+              onChangeText={(value) => setField("dateOfBirth", value)}
               placeholder="DD/MM/YYYY"
-              keyboardType="numeric"
+              showCalendar
             />
-            {/* Gender selector */}
-            <View style={styles.genderSection}>
-              <Text style={styles.genderLabel}>Your Gender:</Text>
-              <View style={styles.genderOptions}>
-                <TouchableOpacity
-                  style={[
-                    styles.genderCard,
-                    form.gender === "male" && styles.genderCardActive,
-                  ]}
-                  onPress={() => set("gender", "male")}
-                >
-                  <View
-                    style={[
-                      styles.genderAvatar,
-                      form.gender === "male" && styles.genderAvatarActive,
-                    ]}
-                  >
-                    <Image
-                      source={GENDER_IMAGES.male}
-                      style={styles.genderImage}
-                      resizeMode="contain"
-                    />
-                  </View>
-                  <Text style={styles.genderText}>Male</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.genderCard,
-                    form.gender === "female" && styles.genderCardActive,
-                  ]}
-                  onPress={() => set("gender", "female")}
-                >
-                  <View
-                    style={[
-                      styles.genderAvatar,
-                      form.gender === "female" && styles.genderAvatarActive,
-                    ]}
-                  >
-                    <Image
-                      source={GENDER_IMAGES.female}
-                      style={styles.genderImage}
-                      resizeMode="contain"
-                    />
-                  </View>
-                  <Text style={styles.genderText}>Female</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+            <SignupFormCard
+              label="Your Gender"
+              value="(Male)"
+              selected={form.gender === "male"}
+              filled={form.gender === "male"}
+              portrait={GENDER_MALE}
+              onPress={() => setField("gender", "male")}
+            />
+            <SignupFormCard
+              label="Your Gender"
+              value="(Female)"
+              selected={form.gender === "female"}
+              filled={form.gender === "female"}
+              portrait={GENDER_FEMALE}
+              onPress={() => setField("gender", "female")}
+            />
           </>
         );
 
       case "social":
         return (
           <>
-            <FormField
+            <SignupFormCard
               label="Facebook"
               value={form.facebook}
-              onChangeText={(v) => set("facebook", v)}
-              placeholder="Facebook profile URL"
+              onChangeText={(value) => setField("facebook", value)}
+              showDropdown
             />
-            <FormField
+            <SignupFormCard
               label="Instagram"
               value={form.instagram}
-              onChangeText={(v) => set("instagram", v)}
-              placeholder="Instagram handle"
+              onChangeText={(value) => setField("instagram", value)}
+              showDropdown
             />
-            <FormField
+            <SignupFormCard
               label="LinkedIn"
               value={form.linkedin}
-              onChangeText={(v) => set("linkedin", v)}
-              placeholder="LinkedIn profile URL"
+              onChangeText={(value) => setField("linkedin", value)}
             />
           </>
         );
@@ -285,26 +246,22 @@ export default function OnboardingStepperScreen() {
       case "contact":
         return (
           <>
-            <FormField
+            <SignupFormCard
               label="Phone Number"
               value={form.phone}
-              onChangeText={(v) => set("phone", v)}
-              placeholder="+1 000 000 0000"
+              onChangeText={(value) => setField("phone", value)}
               keyboardType="phone-pad"
             />
-            <FormField
+            <SignupFormCard
               label="Email"
               value={form.email}
-              onChangeText={(v) => set("email", v)}
-              placeholder="example@email.com"
+              onChangeText={(value) => setField("email", value)}
               keyboardType="email-address"
             />
-            <FormField
-              label="Residential Address"
+            <SignupFormCard
+              label="Address"
               value={form.address}
-              onChangeText={(v) => set("address", v)}
-              placeholder="Enter your residential address"
-              multiline
+              onChangeText={(value) => setField("address", value)}
             />
           </>
         );
@@ -312,33 +269,24 @@ export default function OnboardingStepperScreen() {
       case "membership":
         return (
           <>
-            <FormField
+            <SignupFormCard
               label="Membership Type"
               value={form.membershipType}
-              placeholder="Select membership type"
-              isDropdown
-              options={["Student", "Individual", "Family", "Corporate"]}
-              onSelect={(v) => set("membershipType", v)}
+              options={MEMBERSHIP_TYPES}
+              onSelect={(value) => setField("membershipType", value)}
+              showDropdown
             />
-            <FormField
-              label="No. of Bonds"
-              value={form.numberOfBonds}
-              placeholder="Select number of bonds"
-              isDropdown
-              options={["1 Bond", "2 Bonds", "3 Bonds", "4 Bonds", "5+ Bonds"]}
-              onSelect={(v) => set("numberOfBonds", v)}
+            <SignupFormCard
+              label="Ymca Branch"
+              value={form.currentBranch}
+              options={BRANCHES}
+              onSelect={(value) => setField("currentBranch", value)}
+              showDropdown
             />
-            <FormField
+            <SignupFormCard
               label="Membership ID"
               value={form.membershipId}
-              onChangeText={(v) => set("membershipId", v)}
-              placeholder="Enter membership ID"
-            />
-            <FormField
-              label="Skills"
-              value={form.skills}
-              onChangeText={(v) => set("skills", v)}
-              placeholder="Enter your skills"
+              onChangeText={(value) => setField("membershipId", value)}
             />
           </>
         );
@@ -346,23 +294,20 @@ export default function OnboardingStepperScreen() {
       case "education":
         return (
           <>
-            <FormField
-              label="Go Jointer"
+            <SignupFormCard
+              label="Occupation"
               value={form.goJointer}
-              onChangeText={(v) => set("goJointer", v)}
-              placeholder="Enter go jointer details"
+              onChangeText={(value) => setField("goJointer", value)}
             />
-            <FormField
+            <SignupFormCard
               label="Articular Wellbeing"
               value={form.articularWellbeing}
-              onChangeText={(v) => set("articularWellbeing", v)}
-              placeholder="Enter articular wellbeing"
+              onChangeText={(value) => setField("articularWellbeing", value)}
             />
-            <FormField
-              label="Membership ID"
-              value={form.educationId}
-              onChangeText={(v) => set("educationId", v)}
-              placeholder="Enter membership ID"
+            <SignupFormCard
+              label="Skills"
+              value={form.skills}
+              onChangeText={(value) => setField("skills", value)}
             />
           </>
         );
@@ -370,29 +315,33 @@ export default function OnboardingStepperScreen() {
       case "consent":
         return (
           <>
-            <ConsentRow
-              label="Terms & Agreements —"
-              link="Click to read"
-              checked={form.termsAccepted}
-              onToggle={() => toggle("termsAccepted")}
+            <SignupFormCard
+              label="Terms & Agreements"
+              value="Click to read"
+              selected={form.termsAccepted}
+              filled={form.termsAccepted}
+              onPress={() => toggle("termsAccepted")}
             />
-            <ConsentRow
-              label="Data Privacy Policy —"
-              link="Click to read"
-              checked={form.privacyAccepted}
-              onToggle={() => toggle("privacyAccepted")}
+            <SignupFormCard
+              label="Data Privacy Policy"
+              value="Click to read"
+              selected={form.privacyAccepted}
+              filled={form.privacyAccepted}
+              onPress={() => toggle("privacyAccepted")}
             />
-            <ConsentRow
-              label="Photo Display —"
-              link="Click to read"
-              checked={form.photoAccepted}
-              onToggle={() => toggle("photoAccepted")}
+            <SignupFormCard
+              label="Photo Display"
+              value="Click to read"
+              selected={form.photoAccepted}
+              filled={form.photoAccepted}
+              onPress={() => toggle("photoAccepted")}
             />
-            <ConsentRow
-              label="Notifications —"
-              link="Click to read"
-              checked={form.notifAccepted}
-              onToggle={() => toggle("notifAccepted")}
+            <SignupFormCard
+              label="Notifications"
+              value="Click to read"
+              selected={form.notifAccepted}
+              filled={form.notifAccepted}
+              onPress={() => toggle("notifAccepted")}
             />
           </>
         );
@@ -400,23 +349,17 @@ export default function OnboardingStepperScreen() {
       case "secure":
         return (
           <>
-            <FormField
+            <SignupFormCard
               label="Password"
               value={form.password}
-              onChangeText={(v) => set("password", v)}
-              placeholder="Enter password"
+              onChangeText={(value) => setField("password", value)}
               secureTextEntry
             />
-            <FormField
+            <SignupFormCard
               label="Confirm Password"
               value={form.confirmPassword}
-              onChangeText={(v) => set("confirmPassword", v)}
-              placeholder="Confirm password"
+              onChangeText={(value) => setField("confirmPassword", value)}
               secureTextEntry
-              hasError={
-                form.confirmPassword.length > 0 &&
-                form.password !== form.confirmPassword
-              }
             />
           </>
         );
@@ -426,62 +369,36 @@ export default function OnboardingStepperScreen() {
     }
   };
 
-  // ─── Render ──────────────────────────────────────────────
-  const isLastStep = currentStep === STEPS.length - 1;
-
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" />
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
+        <View style={styles.topBar}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={handleBack}
+            activeOpacity={0.7}
+          >
+            <View style={styles.backIcon}>
+              <SvgXml xml={ICON_BACK} width={7.33} height={10} />
+            </View>
+          </TouchableOpacity>
+        </View>
         <ScrollView
           ref={scrollRef}
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* ── Step title (animated) ── */}
           <Animated.Text style={[styles.stepTitle, { opacity: titleOpacity }]}>
             {STEPS[currentStep].title}
           </Animated.Text>
 
-          {/* ── Video placeholder (static — never animates) ── */}
-          <View style={styles.videoPadding}>
-            <View style={styles.videoContainer}>
-              {/* Dark background */}
-              <View style={styles.videoBg} />
-              {/* Decorative silhouettes */}
-              <View style={styles.videoDecorLeft} />
-              <View style={styles.videoDecorRight} />
-              {/* Green play button */}
-              <View style={styles.playButton}>
-                <View style={styles.playTriangle} />
-              </View>
-              {/* Bottom scrubber bar */}
-              <View style={styles.videoBar}>
-                <View style={styles.scrubberFilled} />
-                <View style={styles.scrubberTrack} />
-              </View>
-            </View>
-          </View>
+          <SignupVideoCard />
 
-          {/* ── Progress dots (updates instantly) ── */}
-          <View style={styles.progressRow}>
-            {STEPS.map((_, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.progressDot,
-                  i <= currentStep
-                    ? styles.progressDotActive
-                    : styles.progressDotInactive,
-                ]}
-              />
-            ))}
-          </View>
-
-          {/* ── Form content (animated) ── */}
           <Animated.View
             style={[
               styles.formContainer,
@@ -495,236 +412,65 @@ export default function OnboardingStepperScreen() {
           </Animated.View>
         </ScrollView>
 
-        {/* ── Fixed footer button ── */}
         <View style={styles.footer}>
-          <OnboardingButton
-            label={isLastStep ? (isLoading ? "Submitting…" : "Submit") : "Next"}
-            onPress={handleNext}
-            disabled={isLastStep && isLoading}
-          />
-          {currentStep > 0 && (
-            <TouchableOpacity
-              style={styles.backStepButton}
-              onPress={handleBack}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.backStepButtonText}>Previous Step</Text>
-            </TouchableOpacity>
-          )}
+          <SignupButton label="Next" onPress={handleNext} />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-// ─── Styles ──────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#F4F4F6",
   },
   flex: {
     flex: 1,
   },
+  topBar: {
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 8,
+    minHeight: 56,
+    justifyContent: "center",
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#D4D8E0",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  backIcon: {
+    width: 24,
+    height: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   scroll: {
     flexGrow: 1,
-    paddingBottom: 12,
-  },
-
-  // ── Title ──
-  stepTitle: {
-    fontSize: 18,
-    fontWeight: "500",
-    color: "#000",
-    textAlign: "center",
-    paddingTop: 14,
-    paddingBottom: 50,
     paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 24,
+    gap: 56,
   },
-
-  // ── Video ──
-  videoPadding: {
-    paddingHorizontal: 20,
+  stepTitle: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#000000",
+    textAlign: "center",
+    textTransform: "capitalize",
   },
-  videoContainer: {
-    width: "100%",
-    height: 170,
-    borderRadius: 16,
-    backgroundColor: "#1a1a1a",
-    overflow: "hidden",
-    position: "relative",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  videoBg: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#222",
-  },
-  videoDecorLeft: {
-    position: "absolute",
-    left: 18,
-    top: 18,
-    bottom: 34,
-    width: "26%",
-    backgroundColor: "#333",
-    borderRadius: 6,
-    opacity: 0.65,
-  },
-  videoDecorRight: {
-    position: "absolute",
-    right: 18,
-    top: 18,
-    bottom: 34,
-    width: "26%",
-    backgroundColor: "#333",
-    borderRadius: 6,
-    opacity: 0.65,
-  },
-  playButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: "rgba(0,200,80,0.92)",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 5,
-    elevation: 5,
-  },
-  playTriangle: {
-    width: 0,
-    height: 0,
-    borderStyle: "solid",
-    borderTopWidth: 8,
-    borderBottomWidth: 8,
-    borderLeftWidth: 14,
-    borderTopColor: "transparent",
-    borderBottomColor: "transparent",
-    borderLeftColor: "#fff",
-    marginLeft: 3,
-  },
-  videoBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 28,
-    flexDirection: "row",
-    backgroundColor: "rgba(0,0,0,0.6)",
-    paddingHorizontal: 12,
-    alignItems: "center",
+  formContainer: {
     gap: 8,
   },
-  scrubberFilled: {
-    width: 52,
-    height: 3,
-    backgroundColor: "#4CAF50",
-    borderRadius: 2,
-  },
-  scrubberTrack: {
-    flex: 1,
-    height: 3,
-    backgroundColor: "rgba(255,255,255,0.22)",
-    borderRadius: 2,
-  },
-
-  // ── Progress ──
-  progressRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 7,
-    paddingVertical: 50,
-  },
-  progressDot: {
-    height: 4,
-    borderRadius: 2,
-  },
-  progressDotActive: {
-    width: 22,
-    backgroundColor: "#000",
-  },
-  progressDotInactive: {
-    width: 14,
-    backgroundColor: "#ddd",
-  },
-
-  // ── Form ──
-  formContainer: {
-    paddingHorizontal: 24,
-    paddingTop: 4,
-  },
-
-  // ── Gender (step 1) ──
-  genderSection: {
-    marginTop: 6,
-    marginBottom: 4,
-  },
-  genderLabel: {
-    fontSize: 11,
-    color: "#888",
-    fontWeight: "500",
-    marginBottom: 10,
-  },
-  genderOptions: {
-    flexDirection: "row",
-    gap: 14,
-  },
-  genderCard: {
-    flex: 1,
-    alignItems: "center",
-    borderWidth: 1.5,
-    borderColor: "#eee",
-    borderRadius: 12,
-    paddingVertical: 12,
-    backgroundColor: "#fafafa",
-  },
-  genderCardActive: {
-    borderColor: "#000",
-    backgroundColor: "#f0f0f0",
-  },
-  genderAvatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 12,
-    backgroundColor: "#000",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-    overflow: "hidden",
-  },
-  genderAvatarActive: {
-    backgroundColor: "#000",
-  },
-  genderImage: {
-    width: "100%",
-    height: "100%",
-  },
-  genderText: {
-    fontSize: 13,
-    fontWeight: "400",
-    color: "#333",
-  },
-
-  // ── Footer ──
   footer: {
     paddingHorizontal: 24,
-    paddingBottom: 18,
-    paddingTop: 10,
-    backgroundColor: "#fff",
-  },
-  backStepButton: {
-    paddingVertical: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
-  },
-  backStepButtonText: {
-    fontSize: 14,
-    color: "#666",
-    fontWeight: "400",
+    paddingBottom: 16,
+    paddingTop: 12,
+    backgroundColor: "#F4F4F6",
   },
 });

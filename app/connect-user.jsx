@@ -12,9 +12,18 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ChevronLeft, SquarePen, Flame } from "lucide-react-native";
 import { SocialIcon, SOCIAL_HANDLES } from "@/components/SocialIcons";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
 export default function ConnectUserScreen() {
   const router = useRouter();
+  const profile = useUserProfile();
+  const qrValue =
+    profile.memberId && profile.memberId !== "—"
+      ? String(profile.memberId)
+      : profile.id;
+  const qrUri = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=10&data=${encodeURIComponent(
+    qrValue
+  )}`;
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
@@ -50,6 +59,12 @@ export default function ConnectUserScreen() {
         <View style={styles.pointsRow}>
           <Flame size={16} color="#FF7A00" fill="#FF7A00" />
           <Text style={styles.pointsText}>1200</Text>
+        </View>
+
+        <View style={styles.qrCard}>
+          <Text style={styles.qrLabel}>Your QR</Text>
+          <Image source={{ uri: qrUri }} style={styles.qrImage} />
+          <Text style={styles.qrMemberId}>{qrValue}</Text>
         </View>
 
         {/* Social handles */}
@@ -138,6 +153,29 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: "#FF7A00",
+  },
+  qrCard: {
+    marginTop: 22,
+    alignItems: "center",
+    backgroundColor: "#F7F8FC",
+    borderRadius: 16,
+    paddingHorizontal: 28,
+    paddingVertical: 18,
+  },
+  qrLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#111",
+    marginBottom: 12,
+  },
+  qrImage: {
+    width: 168,
+    height: 168,
+  },
+  qrMemberId: {
+    marginTop: 10,
+    fontSize: 13,
+    color: "#666",
   },
   sectionTitle: {
     fontSize: 15,

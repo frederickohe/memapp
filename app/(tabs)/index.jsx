@@ -18,12 +18,54 @@ import { useRouter } from "expo-router";
 import { Bell, ChevronRight, Star, MapPin, Crown } from "lucide-react-native";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useUnreadNotificationCount } from "@/hooks/useNotifications";
-import { useImpactStories, usePublishedNewsCount } from "@/hooks/useNews";
+import { useImpactStories, useLatestNews, usePublishedNewsCount } from "@/hooks/useNews";
 import { formatNewsUpdatesLabel } from "@/lib/newsUtils";
 
 const DARK = "#1D3108";
 const SUBTLE = "#4B5563";
 const CARD_BG = "#F7F8FC";
+
+const FALLBACK_STORIES = [
+  {
+    id: "fallback-story-1",
+    title: "Youth Leadership Camp",
+    summary: "Members spent the week building skills and serving their community.",
+    image:
+      "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=600&q=80",
+    isFallback: true,
+    fallbackRoute: "/impact",
+  },
+  {
+    id: "fallback-story-2",
+    title: "Branch Outreach Day",
+    summary: "Volunteers hosted games, health checks, and family activities.",
+    image:
+      "https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?auto=format&fit=crop&w=600&q=80",
+    isFallback: true,
+    fallbackRoute: "/impact",
+  },
+];
+
+const FALLBACK_NEWS = [
+  {
+    id: "fallback-news-1",
+    title: "New Programs This Month",
+    summary: "See the latest classes, camps, and member activities at your branch.",
+    image:
+      "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=600&q=80",
+    isFallback: true,
+    fallbackRoute: "/news",
+  },
+  {
+    id: "fallback-news-2",
+    title: "Membership Updates",
+    summary: "Stay current on branch news, events, and important notices.",
+    image:
+      "https://images.unsplash.com/photo-1495020689067-958852a7765d?auto=format&fit=crop&w=600&q=80",
+    isFallback: true,
+    fallbackRoute: "/news",
+  },
+];
 
 const { width: SCREEN_W } = Dimensions.get("window");
 // Points card inner width: screen padding (16*2) + card padding (16*2).
@@ -32,14 +74,19 @@ const PROGRESS_RATIO = 0.61;
 const FILL_W = CARD_INNER_W * PROGRESS_RATIO;
 const GLARE_W = 90;
 
-const GREETING_H = 34;
+// Greeting block: remaining gap after the 32px header row + 23px text.
+const GREETING_H = 30;
 
 export default function HomeScreen() {
   const router = useRouter();
   const profile = useUserProfile();
   const unreadCount = useUnreadNotificationCount();
   const { stories: impactStories } = useImpactStories(5);
+  const { articles: latestNews } = useLatestNews(5);
   const newsCount = usePublishedNewsCount();
+
+  const stories = impactStories.length > 0 ? impactStories : FALLBACK_STORIES;
+  const newsItems = latestNews.length > 0 ? latestNews : FALLBACK_NEWS;
 
   const branchLabel =
     profile.branch === "—" ? "Your Branch" : `${profile.branch} Branch`;
@@ -113,7 +160,7 @@ export default function HomeScreen() {
         title: "Connect",
         subtitle: "2 New Connections",
         image:
-          "https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&w=600&q=80",
+          "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&w=800&q=80",
         route: "/connect",
       },
       {
@@ -121,7 +168,7 @@ export default function HomeScreen() {
         title: "Programs & Activities",
         subtitle: "2 New Programs",
         image:
-          "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=600&q=80",
+          "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80",
         route: "/programs",
       },
       {
@@ -129,40 +176,35 @@ export default function HomeScreen() {
         title: "Surveys & Feedback",
         subtitle: "2 New Surveys",
         image:
-          "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=600&q=80",
+          "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=800&q=80",
         route: "/surveys",
       },
     ],
     [newsCount]
   );
 
-  const promotions = [
-    {
-      id: "promo1",
-      title: "20% Off Gym Gear",
-      desc: "Members save on all fitness equipment in store this month.",
-      image: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=600&q=80",
-    },
-    {
-      id: "promo2",
-      title: "Free Smoothie",
-      desc: "Grab a complimentary smoothie with any class booking this week.",
-      image: "https://images.unsplash.com/photo-1505252585461-04db1eb84625?auto=format&fit=crop&w=600&q=80",
-    },
-  ];
+  const openCard = (item) => {
+    if (item.isFallback) {
+      router.push(item.fallbackRoute || "/news");
+      return;
+    }
+    router.push(`/news/${item.id}`);
+  };
 
   const renderStoryCard = (item) => (
     <TouchableOpacity
       key={item.id}
       style={styles.storyCard}
       activeOpacity={0.9}
-      onPress={() => router.push(`/news/${item.id}`)}
+      onPress={() => openCard(item)}
     >
       <Image source={{ uri: item.image }} style={styles.storyImage} />
       <View style={styles.storyBody}>
-        <Text style={styles.storyTitle}>{item.title}</Text>
+        <Text style={styles.storyTitle} numberOfLines={1}>
+          {item.title}
+        </Text>
         <Text style={styles.storyDesc} numberOfLines={2}>
-          {item.summary}
+          {item.summary || item.desc}
         </Text>
       </View>
     </TouchableOpacity>
@@ -176,7 +218,7 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
           <View style={styles.locationRow}>
-            <MapPin size={18} color={DARK} fill={DARK} />
+            <MapPin size={16} color={DARK} fill={DARK} />
             <Text style={styles.locationText}>{branchLabel}</Text>
           </View>
           <TouchableOpacity
@@ -226,7 +268,7 @@ export default function HomeScreen() {
           <View style={styles.pointsTopRow}>
             <View style={styles.pointsSummary}>
               <View style={styles.coin}>
-                <Star size={9} color="#fff" fill="#fff" />
+                <Star size={8} color="#fff" fill="#fff" />
               </View>
               <Text style={styles.pointsValue}>15,240</Text>
               <Text style={styles.pointsLabel}>Points</Text>
@@ -271,39 +313,34 @@ export default function HomeScreen() {
             onPress={() => router.push("/achievements")}
           >
             <Text style={styles.qrButtonText}>Achievement and Impact</Text>
-            <ChevronRight size={18} color={DARK} strokeWidth={2.2} />
+            <ChevronRight size={20} color={DARK} strokeWidth={2.2} />
           </TouchableOpacity>
         </View>
 
-        {impactStories.length > 0 ? (
-          <>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Impact Stories</Text>
-              <TouchableOpacity
-                style={styles.viewAll}
-                activeOpacity={0.7}
-                onPress={() => router.push("/impact")}
-              >
-                <Text style={styles.viewAllText}>View All</Text>
-                <ChevronRight size={14} color={DARK} strokeWidth={2} />
-              </TouchableOpacity>
-            </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.hScroll}
-            >
-              {impactStories.map(renderStoryCard)}
-            </ScrollView>
-          </>
-        ) : null}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Impact Stories</Text>
+          <TouchableOpacity
+            style={styles.viewAll}
+            activeOpacity={0.7}
+            onPress={() => router.push("/impact")}
+          >
+            <Text style={styles.viewAllText}>View All</Text>
+            <ChevronRight size={16} color={DARK} strokeWidth={2} />
+          </TouchableOpacity>
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.hScroll}
+        >
+          {stories.map(renderStoryCard)}
+        </ScrollView>
 
-        {/* Prominent Profiles */}
-        <View style={[styles.sectionHeader, { marginTop: 26 }]}>
-          <Text style={styles.sectionTitle}>Prominent Profiles</Text>
+        <View style={[styles.sectionHeader, styles.sectionHeaderSpaced]}>
+          <Text style={styles.sectionTitle}>Featured Stores</Text>
           <TouchableOpacity style={styles.viewAll} activeOpacity={0.7}>
             <Text style={styles.viewAllText}>View All</Text>
-            <ChevronRight size={14} color={DARK} strokeWidth={2} />
+            <ChevronRight size={16} color={DARK} strokeWidth={2} />
           </TouchableOpacity>
         </View>
         <ScrollView
@@ -340,9 +377,14 @@ export default function HomeScreen() {
                 imageStyle={styles.cardImageStyle}
               >
                 <LinearGradient
-                  colors={["rgba(0,0,0,0.78)", "rgba(0,0,0,0.15)"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
+                  colors={[
+                    "rgba(0,0,0,0.75)",
+                    "rgba(0,0,0,0.28)",
+                    "rgba(0,0,0,0.06)",
+                  ]}
+                  locations={[0, 0.52, 1]}
+                  start={{ x: 0, y: 0.5 }}
+                  end={{ x: 1, y: 0.5 }}
                   style={styles.overlay}
                 >
                   <Text style={styles.cardTitle}>{item.title}</Text>
@@ -355,12 +397,15 @@ export default function HomeScreen() {
           ))}
         </View>
 
-        {/* Latest Promotions */}
-        <View style={[styles.sectionHeader, { marginTop: 26 }]}>
-          <Text style={styles.sectionTitle}>Latest Promotions</Text>
-          <TouchableOpacity style={styles.viewAll} activeOpacity={0.7}>
+        <View style={[styles.sectionHeader, styles.sectionHeaderSpaced]}>
+          <Text style={styles.sectionTitle}>Latest News</Text>
+          <TouchableOpacity
+            style={styles.viewAll}
+            activeOpacity={0.7}
+            onPress={() => router.push("/news")}
+          >
             <Text style={styles.viewAllText}>View All</Text>
-            <ChevronRight size={14} color={DARK} strokeWidth={2} />
+            <ChevronRight size={16} color={DARK} strokeWidth={2} />
           </TouchableOpacity>
         </View>
         <ScrollView
@@ -368,7 +413,7 @@ export default function HomeScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.hScroll}
         >
-          {promotions.map(renderStoryCard)}
+          {newsItems.map(renderStoryCard)}
         </ScrollView>
       </Animated.ScrollView>
     </SafeAreaView>
@@ -381,7 +426,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   header: {
-    paddingTop: 8,
+    paddingTop: 14,
     backgroundColor: "#FFFFFF",
   },
   headerTopRow: {
@@ -389,14 +434,16 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
+    minHeight: 32,
   },
   locationRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 8,
   },
   locationText: {
     fontSize: 16,
+    lineHeight: 24,
     fontWeight: "600",
     color: "#000",
   },
@@ -408,11 +455,11 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: "absolute",
-    top: -2,
+    top: -4,
     right: -2,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
+    minWidth: 17,
+    height: 17,
+    borderRadius: 8.5,
     backgroundColor: "#FF0000",
     justifyContent: "center",
     alignItems: "center",
@@ -428,11 +475,11 @@ const styles = StyleSheet.create({
   greetingWrap: {
     justifyContent: "flex-end",
     overflow: "hidden",
-    paddingHorizontal: 16,
-    paddingBottom: 6,
+    paddingHorizontal: 18,
   },
   greeting: {
     fontSize: 15,
+    lineHeight: 23,
     color: "#000",
     fontWeight: "500",
   },
@@ -442,7 +489,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 14,
+    paddingTop: 13,
     paddingBottom: 20,
   },
   pointsCard: {
@@ -450,54 +497,59 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 24,
+    overflow: "hidden",
   },
   pointsTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 18,
+    marginBottom: 16,
   },
   pointsSummary: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-end",
   },
   coin: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: "#E6A817",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 8,
+    marginBottom: 7,
   },
   pointsValue: {
     fontSize: 24,
+    lineHeight: 31,
     fontWeight: "700",
     color: "#000",
   },
   pointsLabel: {
     fontSize: 14,
+    lineHeight: 23,
     color: "#333",
-    marginLeft: 6,
+    marginLeft: 4,
   },
   goldPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    height: 20,
     borderRadius: 40,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
   },
   goldPillText: {
     color: "#FFFFFF",
     fontSize: 11,
+    lineHeight: 14,
     fontWeight: "700",
     letterSpacing: 0.2,
   },
   progressTrack: {
     height: 8,
     borderRadius: 24,
-    backgroundColor: "#E5E7EB",
+    backgroundColor: "#FFFFFF",
     overflow: "hidden",
     marginBottom: 8,
   },
@@ -517,8 +569,9 @@ const styles = StyleSheet.create({
   },
   pointsToNext: {
     fontSize: 12,
+    lineHeight: 17,
     color: "#000",
-    marginBottom: 16,
+    marginBottom: 24,
   },
   qrButton: {
     backgroundColor: "#FFFFFF",
@@ -529,31 +582,39 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    gap: 8,
   },
   qrButtonText: {
     color: DARK,
     fontSize: 14,
+    lineHeight: 23,
     fontWeight: "500",
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 14,
+    height: 24,
+    marginBottom: 16,
+  },
+  sectionHeaderSpaced: {
+    marginTop: 37,
   },
   sectionTitle: {
     fontSize: 16,
+    lineHeight: 24,
     fontWeight: "600",
     color: DARK,
   },
   viewAll: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 2,
+    gap: 6,
+    height: 20,
   },
   viewAllText: {
     fontSize: 13,
+    lineHeight: 20,
     color: DARK,
     fontWeight: "500",
   },
@@ -562,6 +623,7 @@ const styles = StyleSheet.create({
   },
   storyCard: {
     width: 240,
+    height: 201,
     backgroundColor: CARD_BG,
     borderRadius: 12,
     overflow: "hidden",
@@ -574,11 +636,12 @@ const styles = StyleSheet.create({
   },
   storyBody: {
     paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingTop: 12,
     paddingBottom: 16,
   },
   storyTitle: {
     fontSize: 16,
+    lineHeight: 23,
     fontWeight: "600",
     color: DARK,
   },
@@ -586,7 +649,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: SUBTLE,
     lineHeight: 18,
-    marginTop: 4,
+    marginTop: 2,
   },
   profileItem: {
     alignItems: "center",
@@ -597,13 +660,11 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#EEF0F4",
+    backgroundColor: CARD_BG,
     justifyContent: "center",
     alignItems: "center",
     overflow: "hidden",
-    padding: 12,
+    padding: 8,
   },
   logoImage: {
     width: "100%",
@@ -611,19 +672,21 @@ const styles = StyleSheet.create({
   },
   profileName: {
     fontSize: 12,
+    lineHeight: 19,
     color: DARK,
-    marginTop: 8,
+    marginTop: 4,
+    textAlign: "center",
   },
   categoriesList: {
     width: "100%",
-    marginTop: 26,
+    marginTop: 37,
+    gap: 12,
   },
   categoryCard: {
     width: "100%",
     height: 118,
     borderRadius: 16,
     overflow: "hidden",
-    marginBottom: 12,
   },
   cardBg: {
     width: "100%",
@@ -634,27 +697,30 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: "space-between",
     alignItems: "flex-start",
     paddingHorizontal: 20,
+    paddingVertical: 16,
   },
   cardTitle: {
     color: "#FFFFFF",
     fontSize: 20,
+    lineHeight: 29,
     fontWeight: "600",
     letterSpacing: 0.3,
   },
   cardPill: {
-    marginTop: 12,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    height: 26,
+    backgroundColor: "rgba(0,0,0,0.8)",
     borderRadius: 9,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 8,
+    justifyContent: "center",
     alignSelf: "flex-start",
   },
   cardPillText: {
     color: "#FFFFFF",
     fontSize: 12,
+    lineHeight: 18,
     fontWeight: "500",
   },
 });

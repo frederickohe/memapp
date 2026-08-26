@@ -12,8 +12,8 @@ const BRAND_RED = "#FF0000";
 const PILL_BG = "#0A0A0A";
 const INACTIVE = "#9CA3AF";
 
-const PILL_HEIGHT = 58;
-const INDICATOR_HEIGHT = 42;
+const PILL_HEIGHT = 56;
+const INDICATOR_HEIGHT = 36;
 const INDICATOR_TOP = (PILL_HEIGHT - INDICATOR_HEIGHT) / 2;
 
 // Slight overshoot when the indicator lands on the active tab → bounce back.
@@ -93,7 +93,7 @@ export default function CustomTabBar({ state, descriptors, navigation }) {
           style={[styles.indicator, indicatorStyle]}
           onLayout={(e) => setIndicatorW(e.nativeEvent.layout.width)}
         >
-          <ActiveIcon size={21} color={BRAND_RED} strokeWidth={2.4} />
+          <ActiveIcon size={24} color={BRAND_RED} strokeWidth={2.2} />
           <Text style={styles.activeLabel} numberOfLines={1}>
             {activeLabel}
           </Text>
@@ -131,7 +131,7 @@ export default function CustomTabBar({ state, descriptors, navigation }) {
             >
               {/* Active base icon stays rendered but hidden behind the indicator. */}
               <Icon
-                size={21}
+                size={24}
                 color={INACTIVE}
                 strokeWidth={2}
                 style={{ opacity: focused ? 0 : 1 }}
@@ -147,7 +147,7 @@ export default function CustomTabBar({ state, descriptors, navigation }) {
 const styles = StyleSheet.create({
   wrap: {
     backgroundColor: "#FFFFFF",
-    paddingHorizontal: 12,
+    paddingHorizontal: 18,
     paddingTop: 4,
   },
   pill: {
@@ -172,8 +172,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 16,
+    paddingHorizontal: 13,
     gap: 8,
+    overflow: "hidden",
   },
   item: {
     flex: 1,
@@ -183,7 +184,8 @@ const styles = StyleSheet.create({
   },
   activeLabel: {
     color: BRAND_RED,
-    fontSize: 13,
+    fontSize: 14,
+    lineHeight: 24,
     fontWeight: "700",
   },
 });

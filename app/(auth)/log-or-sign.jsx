@@ -1,59 +1,107 @@
 import { useRouter } from "expo-router";
 import {
   Image,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-
 import { SafeAreaView } from "react-native-safe-area-context";
+import { SvgXml } from "react-native-svg";
+
 import { useAuthStore } from "@/stores/useAuthStore";
+import {
+  ICON_DONATE,
+  ICON_LOGIN,
+  ICON_SIGN_UP,
+  RADIO_SELECTED,
+  RADIO_UNSELECTED,
+} from "@/components/authIcons";
+
+const LOGO = require("@/assets/images/auth/ymca-africa-alliance.png");
+
+function OptionButton({
+  iconXml,
+  iconSize = 24,
+  label,
+  selected = false,
+  onPress,
+}) {
+  return (
+    <TouchableOpacity
+      style={[styles.button, selected ? styles.buttonSelected : styles.buttonIdle]}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
+      <View style={[styles.iconWrap, { width: iconSize, height: iconSize }]}>
+        <SvgXml xml={iconXml} width={iconSize} height={iconSize} />
+      </View>
+      <Text
+        style={[styles.buttonLabel, selected && styles.buttonLabelSelected]}
+      >
+        {label}
+      </Text>
+      <View style={styles.radio}>
+        {selected ? (
+          <View style={styles.radioSelectedAsset}>
+            <SvgXml xml={RADIO_SELECTED} width={52} height={52} />
+          </View>
+        ) : (
+          <View style={styles.radioUnselectedAsset}>
+            <SvgXml xml={RADIO_UNSELECTED} width={20} height={20} />
+          </View>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+}
 
 export default function LogOrSignScreen() {
   const router = useRouter();
   const setAuthIntent = useAuthStore((state) => state.setAuthIntent);
+  const setSignupInProgress = useAuthStore((state) => state.setSignupInProgress);
+
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" />
       <View style={styles.content}>
-        <View style={styles.logoContainer}>
-          <Image
-            source={require("@/assets/images/icon.png")}
-            style={styles.logo}
-          />
+        <Image source={LOGO} style={styles.logo} resizeMode="contain" />
+
+        <Text style={styles.welcomeText}>
+          {"Welcome to the \nYmca Member App"}
+        </Text>
+
+        <View style={styles.actions}>
+          <View style={styles.authActions}>
+            <OptionButton
+              iconXml={ICON_SIGN_UP}
+              label="Sign Up"
+              onPress={() => {
+                setAuthIntent("signup");
+                setSignupInProgress(true);
+                requestAnimationFrame(() => {
+                  router.replace("/(onboarding)/welcome");
+                });
+              }}
+            />
+            <OptionButton
+              iconXml={ICON_LOGIN}
+              label="Login"
+              selected
+              onPress={() => {
+                setAuthIntent("login");
+                router.push("/(auth)/login?intent=login");
+              }}
+            />
           </View>
-    <View style={styles.textContainer}>
-        <Text style={styles.welcomeText}>Welcome to the</Text>
-        <Text style={styles.welcomeSubtext}>Ymca Member App</Text>
-    </View>
 
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[styles.button, styles.signUpButton]}
-            onPress={() => {
-              setAuthIntent("signup");
-              router.push("/(auth)/phone-number?intent=signup");
-            }}
-          >
-            <Text style={styles.buttonText}>Sign Up</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.button, styles.loginButton]}
-            onPress={() => {
-              setAuthIntent("login");
-              router.push("/(auth)/login?intent=login");
-            }}
-          >
-            <Text style={styles.loginButton_text}>Login</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.button, styles.donateButton]}
+          <OptionButton
+            iconXml={ICON_DONATE}
+            iconSize={20}
+            label="Donate"
             onPress={() => {}}
-          >
-            <Text style={styles.buttonText}>Donate</Text>
-          </TouchableOpacity>
+          />
         </View>
       </View>
     </SafeAreaView>
@@ -63,73 +111,83 @@ export default function LogOrSignScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#F4F4F6",
   },
   content: {
     flex: 1,
-    justifyContent: "space-between",
-    alignItems: "center",
     paddingHorizontal: 24,
-    paddingVertical: 40,
-  },
-  logoContainer: {
-    alignItems: "center",
-    marginTop: 20,
+    paddingTop: 61,
   },
   logo: {
-    marginBottom: 12,
-  },
-  appName: {
-    fontSize: 24,
-    fontWeight: "400",
-    color: "#000",
+    width: 190,
+    height: 76,
+    alignSelf: "center",
+    borderRadius: 5,
   },
   welcomeText: {
-    fontSize: 16,
-    color: "#666",
+    marginTop: 61,
+    fontSize: 14,
+    fontWeight: "400",
+    lineHeight: 21,
+    color: "#232A3A",
+    textAlign: "center",
   },
-  welcomeSubtext: {
-    fontSize: 16,
-    color: "#666",
-  },
-  buttonContainer: {
+  actions: {
+    marginTop: 106,
     width: "100%",
-    gap: 12,
+    gap: 71,
+  },
+  authActions: {
+    width: "100%",
+    gap: 8,
   },
   button: {
     flexDirection: "row",
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderRadius: 24,
-    justifyContent: "center",
     alignItems: "center",
     gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 26,
+    width: "100%",
+    minHeight: 48,
+    overflow: "visible",
   },
-  signUpButton: {
-    backgroundColor: "#f0f0f0",
-    borderColor: "#ddd",
-    borderWidth: 1,
+  buttonIdle: {
+    backgroundColor: "#FFFFFF",
   },
-  loginButton: {
-    backgroundColor: "#000",
+  buttonSelected: {
+    backgroundColor: "#000000",
   },
-  donateButton: {
-    backgroundColor: "#f0f0f0",
-    borderColor: "#ddd",
-    borderWidth: 1,
+  iconWrap: {
+    overflow: "hidden",
   },
-  buttonIcon: {
-    fontSize: 20,
-  },
-  buttonText: {
-    fontSize: 16,
+  buttonLabel: {
+    flex: 1,
+    fontSize: 14,
     fontWeight: "500",
-    color: "#000",
+    lineHeight: 24,
+    color: "#000000",
   },
-  loginButton_text: {
-    color: "#fff",
+  buttonLabelSelected: {
+    color: "#FFFFFF",
   },
-  textContainer:{
-    alignItems:"center"
-  }
+  radio: {
+    width: 24,
+    height: 24,
+    overflow: "visible",
+  },
+  radioUnselectedAsset: {
+    position: "absolute",
+    top: 2,
+    left: 2,
+    width: 20,
+    height: 20,
+  },
+  radioSelectedAsset: {
+    position: "absolute",
+    top: -8,
+    left: -14,
+    width: 52,
+    height: 52,
+  },
 });

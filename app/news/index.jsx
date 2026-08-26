@@ -11,7 +11,7 @@ import {
   StatusBar,
   ScrollView,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import {
   ArrowLeft,
   RotateCw,
@@ -24,9 +24,14 @@ import {
 import { useNews } from "@/hooks/useNews";
 import { formatTimeAgo } from "@/lib/newsUtils";
 
+const NEWS_FILTERS = ["All", "Projects", "Activities"];
+
 export default function NewsFeedScreen() {
   const router = useRouter();
-  const [activeFilter, setActiveFilter] = useState("All");
+  const params = useLocalSearchParams();
+  const rawFilter = Array.isArray(params.filter) ? params.filter[0] : params.filter;
+  const initialFilter = NEWS_FILTERS.includes(rawFilter) ? rawFilter : "All";
+  const [activeFilter, setActiveFilter] = useState(initialFilter);
   const { newsList, isLoading, isRefreshing, error, lastUpdated, refresh } =
     useNews(activeFilter);
 
@@ -130,7 +135,7 @@ export default function NewsFeedScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterScroll}
         >
-          {["All", "Projects", "Activities"].map((filter) => (
+          {NEWS_FILTERS.map((filter) => (
             <TouchableOpacity
               key={filter}
               style={[

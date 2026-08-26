@@ -23,7 +23,10 @@ SplashScreen.preventAutoHideAsync();
 const { width, height } = Dimensions.get("window");
 
 const SPLASH_SOURCE = require("@/assets/images/splash-screen.png");
-const splashMeta = Image.resolveAssetSource(SPLASH_SOURCE);
+const splashMeta =
+  typeof Image.resolveAssetSource === "function"
+    ? Image.resolveAssetSource(SPLASH_SOURCE)
+    : null;
 const splashRatio =
   splashMeta && splashMeta.width && splashMeta.height
     ? splashMeta.width / splashMeta.height

@@ -1,7 +1,6 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect } from "react";
 import ProfileLoadingScreen from "@/components/ProfileLoadingScreen";
-import { resetNavigationStack } from "@/lib/authNavigation";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 const MIN_LOADING_MS = 1800;
@@ -22,7 +21,6 @@ export default function LoadingProfileScreen() {
       await Promise.all([fetchProfile(), minDelay]);
 
       if (!cancelled) {
-        resetNavigationStack(router);
         router.replace(destination);
       }
     };

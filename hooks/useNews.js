@@ -131,6 +131,42 @@ function normalizeImpactStoriesResponse(response) {
   return [];
 }
 
+export function useUpcomingEvents(limit = 5) {
+  const token = useAuthStore((state) => state.token);
+  const [events, setEvents] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadEvents = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await getPublishedNews(
+        {
+          page: 1,
+          size: Math.min(Math.max(limit, 1), 20),
+          sort_by: "published_at",
+          content_type: "EVENT",
+        },
+        token
+      );
+      const items = (response?.items || []).map(mapNewsItem);
+      setEvents(items);
+    } catch (err) {
+      if (__DEV__) {
+        console.log("[news] upcoming events error", err);
+      }
+      setEvents([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [limit, token]);
+
+  useEffect(() => {
+    loadEvents();
+  }, [loadEvents]);
+
+  return { events, isLoading };
+}
+
 export function useImpactStories(limit = 5) {
   const token = useAuthStore((state) => state.token);
   const [stories, setStories] = useState([]);
@@ -149,10 +185,6 @@ export function useImpactStories(limit = 5) {
 
       try {
         const response = await getImpactStories(limit, token);
-
-        if (__DEV__) {
-          console.log("[news] impact stories response", { limit, response });
-        }
 
         const items = normalizeImpactStoriesResponse(response).map(mapNewsItem);
         setStories(items);
@@ -182,6 +214,40 @@ export function useImpactStories(limit = 5) {
   };
 }
 
+export function useLatestNews(limit = 5) {
+  const token = useAuthStore((state) => state.token);
+  const [articles, setArticles] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadArticles = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await getPublishedNews(
+        {
+          page: 1,
+          size: Math.min(Math.max(limit, 1), 20),
+          sort_by: "published_at",
+        },
+        token
+      );
+      setArticles((response?.items || []).map(mapNewsItem));
+    } catch (err) {
+      if (__DEV__) {
+        console.log("[news] latest news error", err);
+      }
+      setArticles([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [limit, token]);
+
+  useEffect(() => {
+    loadArticles();
+  }, [loadArticles]);
+
+  return { articles, isLoading };
+}
+
 export function usePublishedNewsCount() {
   const token = useAuthStore((state) => state.token);
   const [count, setCount] = useState(0);
@@ -192,10 +258,6 @@ export function usePublishedNewsCount() {
         { page: 1, size: 1, sort_by: "published_at" },
         token
       );
-
-      if (__DEV__) {
-        console.log("[news] count response", { total: response?.total });
-      }
 
       setCount(response?.total ?? 0);
     } catch (err) {

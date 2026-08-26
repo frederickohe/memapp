@@ -12,6 +12,7 @@ export default function AuthLayout() {
       }}
     >
       <Stack.Screen name="log-or-sign" />
+      <Stack.Screen name="form-0" />
       <Stack.Screen name="login" />
       <Stack.Screen name="phone-number" />
       <Stack.Screen name="confirmation-code" />
