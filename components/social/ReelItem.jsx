@@ -1,23 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Dimensions, Image, Share, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Link } from "expo-router";
 import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
+import { pickDefaultAvatar } from "@/lib/defaultAvatars";
+import { formatLikesLabel, formatViewsLabel } from "@/lib/socialStats";
 
 const YMCA_LOGO = require("@/assets/images/auth/ymca-africa-alliance.png");
 const { width: SCREEN_W } = Dimensions.get("window");
 const MEDIA_H = Math.round(SCREEN_W * 1.05);
-
-function initialsFromName(name) {
-  const parts = String(name || "Member")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-  if (parts.length >= 2) {
-    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  }
-  return (parts[0] || "M").slice(0, 2).toUpperCase();
-}
 
 export function avatarUri(author) {
   const raw = typeof author?.avatar === "string" ? author.avatar.trim() : "";
@@ -65,28 +56,12 @@ export function SocialAvatar({ person = {}, size = 36, style }) {
   }
 
   return (
-    <View
-      style={[
-        dimension,
-        {
-          backgroundColor: "#111111",
-          alignItems: "center",
-          justifyContent: "center",
-        },
-        style,
-      ]}
+    <Image
+      source={pickDefaultAvatar(person)}
+      style={[dimension, style]}
+      resizeMode="cover"
       pointerEvents="none"
-    >
-      <Text
-        style={{
-          color: "#FFFFFF",
-          fontWeight: "700",
-          fontSize: Math.round(size * 0.34),
-        }}
-      >
-        {initialsFromName(person?.name || person?.handle)}
-      </Text>
-    </View>
+    />
   );
 }
 
@@ -101,14 +76,42 @@ export function socialProfileHref(userId) {
 export default function ReelItem({ item, onLike, onOpenProfile, onOpenSource }) {
   const author = item.author || {};
   const profileHref = socialProfileHref(author.id);
+  const tapTimer = useRef(null);
+  const [heartBurst, setHeartBurst] = useState(false);
 
-  const handleLike = async () => {
+  useEffect(() => {
+    return () => {
+      if (tapTimer.current) clearTimeout(tapTimer.current);
+    };
+  }, []);
+
+  const pulseHeart = () => {
+    setHeartBurst(true);
+    setTimeout(() => setHeartBurst(false), 700);
+  };
+
+  const handleLike = async ({ fromDoubleTap = false } = {}) => {
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch {
       /* native optional */
     }
+    if (fromDoubleTap) pulseHeart();
+    if (fromDoubleTap && item.liked) return;
     onLike?.(item.id);
+  };
+
+  const handleMediaPress = () => {
+    if (tapTimer.current) {
+      clearTimeout(tapTimer.current);
+      tapTimer.current = null;
+      handleLike({ fromDoubleTap: true });
+      return;
+    }
+    tapTimer.current = setTimeout(() => {
+      tapTimer.current = null;
+      onOpenSource?.(item);
+    }, 280);
   };
 
   const handleShare = async () => {
@@ -169,13 +172,20 @@ export default function ReelItem({ item, onLike, onOpenProfile, onOpenSource }) 
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity activeOpacity={0.98} onPress={() => onOpenSource?.(item)}>
-        <Image source={{ uri: item.media_url }} style={styles.media} resizeMode="cover" />
+      <TouchableOpacity activeOpacity={0.98} onPress={handleMediaPress}>
+        <View>
+          <Image source={{ uri: item.media_url }} style={styles.media} resizeMode="cover" />
+          {heartBurst ? (
+            <View style={styles.heartBurst} pointerEvents="none">
+              <Heart size={88} color="#fff" fill="#ED4956" />
+            </View>
+          ) : null}
+        </View>
       </TouchableOpacity>
 
       <View style={styles.actions}>
         <View style={styles.actionsLeft}>
-          <TouchableOpacity onPress={handleLike} activeOpacity={0.8} hitSlop={8}>
+          <TouchableOpacity onPress={() => handleLike()} activeOpacity={0.8} hitSlop={8}>
             <Heart
               size={26}
               color={item.liked ? "#ED4956" : "#262626"}
@@ -198,9 +208,11 @@ export default function ReelItem({ item, onLike, onOpenProfile, onOpenSource }) 
       </View>
 
       <View style={styles.body}>
-        <Text style={styles.likes}>
-          {item.likes === 1 ? "1 like" : `${item.likes || 0} likes`}
-        </Text>
+        <View style={styles.statsRow}>
+          <Text style={styles.likes}>{formatLikesLabel(item.likes)}</Text>
+          <Text style={styles.statDot}>·</Text>
+          <Text style={styles.views}>{formatViewsLabel(item.views)}</Text>
+        </View>
         {item.title ? (
           <Text style={styles.title} numberOfLines={2}>
             {item.title}
@@ -266,6 +278,11 @@ const styles = StyleSheet.create({
     height: MEDIA_H,
     backgroundColor: "#F2F2F2",
   },
+  heartBurst: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   actions: {
     flexDirection: "row",
     alignItems: "center",
@@ -283,11 +300,26 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 6,
   },
+  statsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+    gap: 6,
+  },
   likes: {
     fontSize: 14,
     fontWeight: "700",
     color: "#262626",
-    marginBottom: 4,
+  },
+  views: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#8E8E8E",
+  },
+  statDot: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#8E8E8E",
   },
   title: {
     fontSize: 14,

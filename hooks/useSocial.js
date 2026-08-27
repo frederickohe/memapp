@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   createSocialPost,
   getSocialFeed,
   getSocialProfile,
   getUserSocialPosts,
   likeSocialItem,
+  recordSocialView,
   searchSocialUsers,
 } from "@/lib/api/social";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -21,12 +22,25 @@ const YMCA_PROFILE = {
   is_self: false,
 };
 
+function applyLike(items, itemId, liked, likes) {
+  return items.map((item) =>
+    item.id === itemId ? { ...item, liked, likes } : item
+  );
+}
+
+function applyView(items, itemId, viewed, views) {
+  return items.map((item) =>
+    item.id === itemId ? { ...item, viewed, views } : item
+  );
+}
+
 export function useSocialFeed() {
   const token = useAuthStore((state) => state.token);
   const [items, setItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const viewedIds = useRef(new Set());
 
   const load = useCallback(
     async ({ refreshing = false } = {}) => {
@@ -35,7 +49,11 @@ export function useSocialFeed() {
       setError(null);
       try {
         const feed = await getSocialFeed({ page: 1, size: 40 }, token);
-        setItems(feed?.items || []);
+        const next = feed?.items || [];
+        next.forEach((item) => {
+          if (item?.viewed && item.id) viewedIds.current.add(item.id);
+        });
+        setItems(next);
       } catch (err) {
         setError(err.message || "Unable to load Y Social");
       } finally {
@@ -50,31 +68,42 @@ export function useSocialFeed() {
     load();
   }, [load]);
 
-  const toggleLike = async (itemId) => {
-    setItems((current) =>
-      current.map((item) => {
-        if (item.id !== itemId) return item;
-        const liked = !item.liked;
-        return {
-          ...item,
-          liked,
-          likes: Math.max(0, (item.likes || 0) + (liked ? 1 : -1)),
-        };
-      })
-    );
-    try {
-      const result = await likeSocialItem(itemId, token);
+  const toggleLike = useCallback(
+    async (itemId) => {
       setItems((current) =>
-        current.map((item) =>
-          item.id === itemId
-            ? { ...item, liked: result.liked, likes: result.likes }
-            : item
-        )
+        current.map((item) => {
+          if (item.id !== itemId) return item;
+          const liked = !item.liked;
+          return {
+            ...item,
+            liked,
+            likes: Math.max(0, (item.likes || 0) + (liked ? 1 : -1)),
+          };
+        })
       );
-    } catch {
-      load({ refreshing: true });
-    }
-  };
+      try {
+        const result = await likeSocialItem(itemId, token);
+        setItems((current) => applyLike(current, itemId, result.liked, result.likes));
+      } catch {
+        load({ refreshing: true });
+      }
+    },
+    [token, load]
+  );
+
+  const recordView = useCallback(
+    async (itemId) => {
+      if (!itemId || viewedIds.current.has(itemId)) return;
+      viewedIds.current.add(itemId);
+      try {
+        const result = await recordSocialView(itemId, token);
+        setItems((current) => applyView(current, itemId, result.viewed, result.views));
+      } catch {
+        viewedIds.current.delete(itemId);
+      }
+    },
+    [token]
+  );
 
   return {
     items,
@@ -83,6 +112,7 @@ export function useSocialFeed() {
     error,
     refresh: () => load({ refreshing: true }),
     toggleLike,
+    recordView,
   };
 }
 
@@ -120,6 +150,7 @@ export function useSocialProfile(userId) {
   const [posts, setPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const viewedIds = useRef(new Set());
 
   const load = useCallback(async () => {
     if (!userId) {
@@ -133,8 +164,12 @@ export function useSocialProfile(userId) {
         getSocialProfile(userId, token),
         getUserSocialPosts(userId, { page: 1, size: 30 }, token),
       ]);
+      const nextPosts = postsData?.items || [];
+      nextPosts.forEach((item) => {
+        if (item?.viewed && item.id) viewedIds.current.add(item.id);
+      });
       setProfile(profileData);
-      setPosts(postsData?.items || []);
+      setPosts(nextPosts);
     } catch (err) {
       if (userId === "ymca") {
         setProfile(YMCA_PROFILE);
@@ -151,7 +186,44 @@ export function useSocialProfile(userId) {
     load();
   }, [load]);
 
-  return { profile, posts, isLoading, error, refresh: load };
+  const toggleLike = useCallback(
+    async (itemId) => {
+      setPosts((current) =>
+        current.map((item) => {
+          if (item.id !== itemId) return item;
+          const liked = !item.liked;
+          return {
+            ...item,
+            liked,
+            likes: Math.max(0, (item.likes || 0) + (liked ? 1 : -1)),
+          };
+        })
+      );
+      try {
+        const result = await likeSocialItem(itemId, token);
+        setPosts((current) => applyLike(current, itemId, result.liked, result.likes));
+      } catch {
+        load();
+      }
+    },
+    [token, load]
+  );
+
+  const recordView = useCallback(
+    async (itemId) => {
+      if (!itemId || viewedIds.current.has(itemId)) return;
+      viewedIds.current.add(itemId);
+      try {
+        const result = await recordSocialView(itemId, token);
+        setPosts((current) => applyView(current, itemId, result.viewed, result.views));
+      } catch {
+        viewedIds.current.delete(itemId);
+      }
+    },
+    [token]
+  );
+
+  return { profile, posts, isLoading, error, refresh: load, toggleLike, recordView };
 }
 
 export function useCreatePost() {

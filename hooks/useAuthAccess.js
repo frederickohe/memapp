@@ -3,7 +3,7 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import { isAuthenticated } from "@/lib/authRouting";
 
 export function useAuthAccess() {
-  const [hydrated, setHydrated] = useState(() =>
+  const [authHydrated, setAuthHydrated] = useState(() =>
     useAuthStore.persist.hasHydrated()
   );
 
@@ -13,15 +13,25 @@ export function useAuthAccess() {
   const onboardingComplete = useAuthStore((state) => state.onboardingComplete);
   const otpVerified = useAuthStore((state) => state.otpVerified);
   const signupInProgress = useAuthStore((state) => state.signupInProgress);
+  const devicePinEnabled = useAuthStore((state) => state.devicePinEnabled);
+  const pinUnlocked = useAuthStore((state) => state.pinUnlocked);
+  const pinReady = useAuthStore((state) => state.pinReady);
+  const localSignedOut = useAuthStore((state) => state.localSignedOut);
+  const hydrateDevicePin = useAuthStore((state) => state.hydrateDevicePin);
 
   useEffect(() => {
     if (useAuthStore.persist.hasHydrated()) {
-      setHydrated(true);
+      setAuthHydrated(true);
       return;
     }
 
-    return useAuthStore.persist.onFinishHydration(() => setHydrated(true));
+    return useAuthStore.persist.onFinishHydration(() => setAuthHydrated(true));
   }, []);
+
+  useEffect(() => {
+    if (!authHydrated) return;
+    hydrateDevicePin();
+  }, [authHydrated, hydrateDevicePin]);
 
   const state = {
     token,
@@ -32,15 +42,24 @@ export function useAuthAccess() {
     signupInProgress,
   };
   const authenticated = isAuthenticated(state);
-  const canAccessApp = authenticated && onboardingComplete;
+  const pinLocked =
+    authenticated &&
+    onboardingComplete &&
+    devicePinEnabled &&
+    !pinUnlocked &&
+    !localSignedOut;
+  const canAccessApp =
+    authenticated && onboardingComplete && !localSignedOut && !pinLocked;
+  const canAccessPinLock = pinLocked;
   const canAccessOnboarding =
     !onboardingComplete &&
     (otpVerified || authenticated || signupInProgress);
-  const canAccessAuth = !canAccessApp && !canAccessOnboarding;
+  const canAccessAuth = !canAccessApp && !canAccessOnboarding && !canAccessPinLock;
 
   return {
-    hydrated,
+    hydrated: authHydrated && pinReady,
     canAccessApp,
+    canAccessPinLock,
     canAccessOnboarding,
     canAccessAuth,
   };

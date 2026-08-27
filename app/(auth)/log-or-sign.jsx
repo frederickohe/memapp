@@ -61,6 +61,31 @@ export default function LogOrSignScreen() {
   const router = useRouter();
   const setAuthIntent = useAuthStore((state) => state.setAuthIntent);
   const setSignupInProgress = useAuthStore((state) => state.setSignupInProgress);
+  const signOut = useAuthStore((state) => state.signOut);
+  const resumePinLogin = useAuthStore((state) => state.resumePinLogin);
+  const token = useAuthStore((state) => state.token);
+  const devicePinEnabled = useAuthStore((state) => state.devicePinEnabled);
+
+  const handleSignUp = async () => {
+    if (token) {
+      await signOut();
+    }
+    setAuthIntent("signup");
+    setSignupInProgress(true);
+    requestAnimationFrame(() => {
+      router.replace("/(onboarding)/welcome");
+    });
+  };
+
+  const handleLogin = () => {
+    setAuthIntent("login");
+    if (devicePinEnabled && token) {
+      resumePinLogin();
+      router.replace("/pin-login");
+      return;
+    }
+    router.push("/(auth)/login?intent=login");
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -77,22 +102,13 @@ export default function LogOrSignScreen() {
             <OptionButton
               iconXml={ICON_SIGN_UP}
               label="Sign Up"
-              onPress={() => {
-                setAuthIntent("signup");
-                setSignupInProgress(true);
-                requestAnimationFrame(() => {
-                  router.replace("/(onboarding)/welcome");
-                });
-              }}
+              onPress={handleSignUp}
             />
             <OptionButton
               iconXml={ICON_LOGIN}
               label="Login"
               selected
-              onPress={() => {
-                setAuthIntent("login");
-                router.push("/(auth)/login?intent=login");
-              }}
+              onPress={handleLogin}
             />
           </View>
 

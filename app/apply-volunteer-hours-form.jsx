@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import {
+  Alert,
+  Image,
   StyleSheet,
   Text,
   View,
@@ -10,30 +12,110 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Upload } from "lucide-react-native";
+import * as ImagePicker from "expo-image-picker";
+import { ArrowLeft, Upload } from "lucide-react-native";
 import {
   FormField,
   OnboardingButton,
 } from "@/components/OnboardingFormComponents";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { submitVolunteerHours, uploadVolunteerProof } from "@/lib/api/vhs";
+import {
+  clearVolunteerApplyDraft,
+  getVolunteerApplyDraft,
+  parseVolunteerDate,
+  todayDisplayDate,
+} from "@/lib/volunteerUtils";
 
 const STEPS = ["Upload", "Details"];
 
 export default function ApplyVolunteerHoursFormScreen() {
   const router = useRouter();
-  const [hours, setHours] = useState("3");
+  const token = useAuthStore((state) => state.token);
+  const profile = useUserProfile();
+  const [hours, setHours] = useState("");
   const [activity, setActivity] = useState("");
-  const [location, setLocation] = useState("");
-  const [date, setDate] = useState("");
+  const [location, setLocation] = useState(
+    profile.branch && profile.branch !== "—" ? profile.branch : ""
+  );
+  const [date, setDate] = useState(todayDisplayDate());
   const [description, setDescription] = useState("");
+  const [receipt, setReceipt] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = () => {
-    router.push({
-      pathname: "/apply-volunteer-hours-success",
-      params: {
-        hours,
-        activity: activity.trim() || "Volunteer activity",
-      },
+  const pickReceipt = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("Photo access needed", "Allow photo access to attach proof of your hours.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.85,
     });
+
+    if (!result.canceled && result.assets?.[0]) {
+      const asset = result.assets[0];
+      setReceipt({
+        uri: asset.uri,
+        name: asset.fileName || "volunteer-receipt.jpg",
+        type: asset.mimeType || "image/jpeg",
+      });
+    }
+  };
+
+  const handleSubmit = async () => {
+    const parsedHours = Number(hours);
+    if (!parsedHours || parsedHours <= 0 || parsedHours > 24) {
+      Alert.alert("Hours required", "Enter the hours you volunteered, up to 24.");
+      return;
+    }
+    if (activity.trim().length < 2) {
+      Alert.alert("Activity required", "Tell us what you volunteered for.");
+      return;
+    }
+    const volunteerDate = parseVolunteerDate(date);
+    if (!volunteerDate) {
+      Alert.alert("Date required", "Use the date format DD / MM / YYYY.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const proofFile = receipt || getVolunteerApplyDraft().video;
+      let proofUrl = null;
+      if (proofFile?.uri) {
+        const uploaded = await uploadVolunteerProof(proofFile, token);
+        proofUrl = uploaded?.file_url || uploaded?.fileUrl || null;
+      }
+
+      await submitVolunteerHours(
+        {
+          hours: parsedHours,
+          activity_name: activity.trim(),
+          activity_description: description.trim() || null,
+          branch: location.trim() || null,
+          volunteer_date: volunteerDate,
+          proof_document_url: proofUrl,
+        },
+        token
+      );
+
+      clearVolunteerApplyDraft();
+      router.replace({
+        pathname: "/apply-volunteer-hours-success",
+        params: {
+          hours: String(parsedHours),
+          activity: activity.trim(),
+        },
+      });
+    } catch (err) {
+      Alert.alert("Could not submit", err.message || "Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -42,6 +124,18 @@ export default function ApplyVolunteerHoursFormScreen() {
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+          >
+            <ArrowLeft size={24} color="#111" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Apply Hours</Text>
+          <View style={{ width: 24 }} />
+        </View>
+
         <ScrollView
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
@@ -50,16 +144,24 @@ export default function ApplyVolunteerHoursFormScreen() {
           <Text style={styles.stepTitle}>Apply Hours</Text>
 
           <View style={styles.mediaPadding}>
-            <TouchableOpacity style={styles.receiptCard} activeOpacity={0.9}>
-              <View style={styles.receiptInner}>
-                <View style={styles.uploadIconWrap}>
-                  <Upload size={24} color="#111" strokeWidth={2} />
+            <TouchableOpacity
+              style={styles.receiptCard}
+              activeOpacity={0.9}
+              onPress={pickReceipt}
+            >
+              {receipt?.uri ? (
+                <Image source={{ uri: receipt.uri }} style={styles.receiptPreview} />
+              ) : (
+                <View style={styles.receiptInner}>
+                  <View style={styles.uploadIconWrap}>
+                    <Upload size={24} color="#111" strokeWidth={2} />
+                  </View>
+                  <Text style={styles.receiptTitle}>Upload receipt</Text>
+                  <Text style={styles.receiptHint}>
+                    Tap to add a photo of your volunteer receipt
+                  </Text>
                 </View>
-                <Text style={styles.receiptTitle}>Upload receipt</Text>
-                <Text style={styles.receiptHint}>
-                  Tap to add a photo of your volunteer receipt
-                </Text>
-              </View>
+              )}
             </TouchableOpacity>
           </View>
 
@@ -83,7 +185,7 @@ export default function ApplyVolunteerHoursFormScreen() {
               value={hours}
               onChangeText={setHours}
               placeholder="0"
-              keyboardType="number-pad"
+              keyboardType="decimal-pad"
             />
             <FormField
               label="Activity"
@@ -114,11 +216,16 @@ export default function ApplyVolunteerHoursFormScreen() {
         </ScrollView>
 
         <View style={styles.footer}>
-          <OnboardingButton label="Submit" onPress={handleSubmit} />
+          <OnboardingButton
+            label={submitting ? "Submitting…" : "Submit"}
+            onPress={handleSubmit}
+            disabled={submitting}
+          />
           <TouchableOpacity
             style={styles.backStepButton}
             onPress={() => router.back()}
             activeOpacity={0.7}
+            disabled={submitting}
           >
             <Text style={styles.backStepButtonText}>Previous Step</Text>
           </TouchableOpacity>
@@ -136,6 +243,21 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  backButton: {
+    padding: 4,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "500",
+    color: "#111",
+  },
   scroll: {
     flexGrow: 1,
     paddingBottom: 12,
@@ -145,7 +267,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#000",
     textAlign: "center",
-    paddingTop: 14,
+    paddingTop: 8,
     paddingBottom: 36,
     paddingHorizontal: 24,
   },
@@ -160,6 +282,10 @@ const styles = StyleSheet.create({
     borderColor: "#ECECEF",
     backgroundColor: "#FAFAFA",
     overflow: "hidden",
+  },
+  receiptPreview: {
+    width: "100%",
+    height: 170,
   },
   receiptInner: {
     flex: 1,

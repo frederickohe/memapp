@@ -9,6 +9,8 @@ import {
   Dimensions,
   Easing,
   Image,
+  Keyboard,
+  Platform,
   StyleSheet,
   Text,
   View,
@@ -16,6 +18,7 @@ import {
 import "react-native-reanimated";
 import { LATO_FONTS, applyGlobalLatoFont } from "@/components/latoFont";
 import { useAuthAccess } from "@/hooks/useAuthAccess";
+import { SplashVisibleContext } from "@/hooks/useSplashVisible";
 
 applyGlobalLatoFont();
 SplashScreen.preventAutoHideAsync();
@@ -44,7 +47,7 @@ export default function RootLayout() {
   const [splashVisible, setSplashVisible] = useState(true);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const panAnim = useRef(new Animated.Value(0)).current;
-  const { hydrated, canAccessApp, canAccessOnboarding, canAccessAuth } =
+  const { hydrated, canAccessApp, canAccessPinLock, canAccessOnboarding, canAccessAuth } =
     useAuthAccess();
 
   useEffect(() => {
@@ -72,6 +75,18 @@ export default function RootLayout() {
     return () => animation.stop();
   }, [fontsLoaded, fadeAnim, panAnim]);
 
+  useEffect(() => {
+    if (!splashVisible) return undefined;
+
+    Keyboard.dismiss();
+    const event = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const subscription = Keyboard.addListener(event, () => {
+      Keyboard.dismiss();
+    });
+
+    return () => subscription.remove();
+  }, [splashVisible]);
+
   const splashTranslateX = panAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [0, -SPLASH_PAN_DISTANCE],
@@ -82,7 +97,7 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    <SplashVisibleContext.Provider value={splashVisible}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Protected guard={canAccessApp}>
           <Stack.Screen name="(tabs)" />
@@ -100,12 +115,16 @@ export default function RootLayout() {
           />
           <Stack.Screen name="notifications" />
           <Stack.Screen name="impact" />
+          <Stack.Screen name="profiles" />
           <Stack.Screen name="social" />
           <Stack.Screen name="connect" />
           <Stack.Screen name="connect-user" />
           <Stack.Screen name="connect-list" />
           <Stack.Screen name="connect-profile" />
           <Stack.Screen name="edit-profile" />
+          <Stack.Screen name="settings" />
+          <Stack.Screen name="select-language" />
+          <Stack.Screen name="set-pin" />
           <Stack.Screen name="programs" />
           <Stack.Screen name="surveys" />
           <Stack.Screen name="affiliation" />
@@ -113,6 +132,10 @@ export default function RootLayout() {
           <Stack.Screen name="pay-upi" />
           <Stack.Screen name="pay-card" />
           <Stack.Screen name="add-card" />
+        </Stack.Protected>
+
+        <Stack.Protected guard={canAccessPinLock}>
+          <Stack.Screen name="pin-login" options={{ gestureEnabled: false }} />
         </Stack.Protected>
 
         <Stack.Protected guard={canAccessOnboarding}>
@@ -152,7 +175,7 @@ export default function RootLayout() {
           </View>
         </Animated.View>
       )}
-    </>
+    </SplashVisibleContext.Provider>
   );
 }
 

@@ -7,10 +7,19 @@ import {
   sendOtp as sendOtpRequest,
   verifyOtp as verifyOtpRequest,
   signOut as signOutRequest,
+  refreshSession as refreshSessionRequest,
 } from "@/lib/api/auth";
 import { buildSignupPayload } from "@/lib/signupPayload";
 import { getCurrentUser, updateCurrentUser } from "@/lib/api/user";
 import { isAuthenticated, resolveInitialRoute } from "@/lib/authRouting";
+import {
+  clearDevicePin,
+  getDevicePinRecord,
+  pinMatchesAccount,
+  saveDevicePin,
+  verifyDevicePin,
+} from "@/lib/devicePin";
+import { loadAppSettings, saveAppSettings } from "@/lib/appSettings";
 
 function extractAuthPayload(response) {
   const data = response?.data ?? response ?? {};
@@ -53,6 +62,38 @@ function logAuthToken(token, source) {
   });
 }
 
+function accountKeyFromState(state) {
+  return String(state?.email || state?.user?.email || "")
+    .trim()
+    .toLowerCase();
+}
+
+async function syncPinForAccount(accountKey) {
+  const record = await getDevicePinRecord();
+  if (!record) return false;
+  if (!accountKey) return true;
+  if (!pinMatchesAccount(record, accountKey)) {
+    await clearDevicePin();
+    return false;
+  }
+  return true;
+}
+
+async function migrateLegacyPin(accountKey) {
+  try {
+    const prefs = await loadAppSettings();
+    if (!prefs?.pin || String(prefs.pin).length < 4) return;
+    const existing = await getDevicePinRecord();
+    if (!existing) {
+      await saveDevicePin(String(prefs.pin), accountKey);
+    }
+    const { pin, pinEnabled, ...rest } = prefs;
+    await saveAppSettings(rest);
+  } catch {
+    // Ignore migration errors; PIN setup can be repeated locally.
+  }
+}
+
 export function logCurrentAuthToken() {
   logAuthToken(useAuthStore.getState().token, "manual");
 }
@@ -75,6 +116,10 @@ export const useAuthStore = create(
       profileLoaded: false,
       profileError: null,
       error: null,
+      devicePinEnabled: false,
+      pinUnlocked: false,
+      pinReady: false,
+      localSignedOut: false,
 
       setAuthIntent: (authIntent) => set({ authIntent }),
       setPhone: (phone) => set({ phone }),
@@ -96,17 +141,23 @@ export const useAuthStore = create(
           }
           const user = await resolveUser(auth.token, auth.user);
 
+          const accountKey = String(email).trim().toLowerCase();
+          const devicePinEnabled = await syncPinForAccount(accountKey);
+
           set({
             token: auth.token,
             refreshToken: auth.refreshToken,
             user,
-            email: String(email).trim().toLowerCase(),
+            email: accountKey,
             phone: user?.phone_number || get().phone,
             authIntent: null,
             otpVerified: false,
             signupInProgress: false,
             onboardingComplete: true,
             isLoading: false,
+            devicePinEnabled,
+            pinUnlocked: true,
+            localSignedOut: false,
           });
 
           logAuthToken(auth.token, "signIn");
@@ -194,17 +245,23 @@ export const useAuthStore = create(
           };
           const user = await resolveUser(auth.token, fallbackUser);
 
+          const nextEmail = user?.email || payload.email || email;
+          const devicePinEnabled = await syncPinForAccount(nextEmail);
+
           set({
             token: auth.token,
             refreshToken: auth.refreshToken,
             user,
-            email: user?.email || payload.email || email,
+            email: nextEmail,
             phone: user?.phone_number || payload.phone_number || phone,
             authIntent: null,
             otpVerified: false,
             isLoading: false,
             signupInProgress: true,
             onboardingComplete: false,
+            devicePinEnabled,
+            pinUnlocked: true,
+            localSignedOut: false,
           });
 
           logAuthToken(auth.token, "signUp");
@@ -221,6 +278,82 @@ export const useAuthStore = create(
 
       completeOnboarding: () =>
         set({ onboardingComplete: true, signupInProgress: false }),
+
+      hydrateDevicePin: async () => {
+        const accountKey = accountKeyFromState(get());
+        await migrateLegacyPin(accountKey);
+        const devicePinEnabled = await syncPinForAccount(accountKey);
+        set({
+          devicePinEnabled,
+          pinUnlocked: devicePinEnabled ? get().pinUnlocked : true,
+          pinReady: true,
+        });
+      },
+
+      saveLocalPin: async (pin) => {
+        await saveDevicePin(pin, accountKeyFromState(get()));
+        set({ devicePinEnabled: true, pinUnlocked: true, localSignedOut: false });
+      },
+
+      disableLocalPin: async () => {
+        await clearDevicePin();
+        set({ devicePinEnabled: false, pinUnlocked: true });
+      },
+
+      unlockWithPin: async (pin) => {
+        const matched = await verifyDevicePin(pin);
+        if (!matched) return { success: false, reason: "pin" };
+
+        const { refreshToken, email, user } = get();
+        if (!refreshToken) {
+          return { success: false, reason: "refresh" };
+        }
+
+        set({ isLoading: true, error: null });
+        try {
+          const response = await refreshSessionRequest({
+            refresh_token: refreshToken,
+            email,
+          });
+          const auth = extractAuthPayload(response);
+          if (!auth.token) {
+            throw new Error("Session refresh succeeded without an access token");
+          }
+
+          const nextUser = await resolveUser(auth.token, user);
+          set({
+            token: auth.token,
+            refreshToken: auth.refreshToken || refreshToken,
+            user: nextUser,
+            email: nextUser?.email || email,
+            phone: nextUser?.phone_number || get().phone,
+            pinUnlocked: true,
+            localSignedOut: false,
+            isLoading: false,
+            error: null,
+          });
+          logAuthToken(auth.token, "pinRefresh");
+          return { success: true };
+        } catch (error) {
+          set({
+            isLoading: false,
+            error: error.message || "Unable to refresh session",
+          });
+          return { success: false, reason: "refresh", error };
+        }
+      },
+
+      lockPin: () => set({ pinUnlocked: false }),
+
+      resumePinLogin: () => set({ localSignedOut: false, pinUnlocked: false }),
+
+      logoutToWelcome: async () => {
+        if (get().devicePinEnabled && get().token) {
+          set({ localSignedOut: true, pinUnlocked: false });
+          return;
+        }
+        await get().signOut();
+      },
 
       updateProfile: async (payload) => {
         const { token, user: currentUser } = get();
@@ -280,7 +413,7 @@ export const useAuthStore = create(
         }
       },
 
-      signOut: async () => {
+      signOut: async ({ clearPin = false } = {}) => {
         const { token } = get();
         try {
           if (token) {
@@ -288,6 +421,10 @@ export const useAuthStore = create(
           }
         } catch {
           // Ignore network errors during sign out.
+        }
+
+        if (clearPin) {
+          await clearDevicePin();
         }
 
         set({
@@ -306,6 +443,9 @@ export const useAuthStore = create(
           profileLoaded: false,
           profileError: null,
           error: null,
+          devicePinEnabled: clearPin ? false : get().devicePinEnabled,
+          pinUnlocked: false,
+          localSignedOut: false,
         });
       },
 
@@ -324,6 +464,7 @@ export const useAuthStore = create(
         signupInProgress: state.signupInProgress,
         onboardingComplete: state.onboardingComplete,
         profileLoaded: state.profileLoaded,
+        localSignedOut: state.localSignedOut,
       }),
       onRehydrateStorage: () => (state) => {
         logAuthToken(state?.token, "persist rehydrate");

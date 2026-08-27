@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useRef } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -16,10 +16,23 @@ import ReelItem, { socialProfileHref } from "@/components/social/ReelItem";
 
 export default function YSocialFeedScreen() {
   const router = useRouter();
-  const { items, isLoading, isRefreshing, error, refresh, toggleLike } =
+  const { items, isLoading, isRefreshing, error, refresh, toggleLike, recordView } =
     useSocialFeed();
+  const recordViewRef = useRef(recordView);
+  recordViewRef.current = recordView;
 
-  const openSource = (item) => {
+  const onViewableItemsChanged = useRef(({ viewableItems }) => {
+    viewableItems.forEach(({ item }) => {
+      if (item?.id) recordViewRef.current?.(item.id);
+    });
+  }).current;
+
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 55,
+    minimumViewTime: 450,
+  }).current;
+
+  const openSource = useCallback((item) => {
     if (item.item_type === "NEWS") {
       router.push(`/news/${item.source_id}`);
       return;
@@ -27,7 +40,7 @@ export default function YSocialFeedScreen() {
     if (item.item_type === "PROGRAM") {
       router.push(`/programs/${item.source_id}`);
     }
-  };
+  }, [router]);
 
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
@@ -89,6 +102,8 @@ export default function YSocialFeedScreen() {
           showsVerticalScrollIndicator={false}
           refreshing={isRefreshing}
           onRefresh={refresh}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
           ListEmptyComponent={
             <View style={styles.empty}>
               <Text style={styles.errorText}>No posts yet. Be the first to share.</Text>

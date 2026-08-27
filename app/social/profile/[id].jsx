@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -15,11 +15,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ChevronLeft, Flame, Grid3x3, X } from "lucide-react-native";
+import { ChevronLeft, Eye, Flame, Grid3x3, Heart, X } from "lucide-react-native";
 import { useSocialProfile } from "@/hooks/useSocial";
 import { SocialAvatar } from "@/components/social/ReelItem";
 import { SocialIcon } from "@/components/SocialIcons";
 import { listedSocialChannels } from "@/lib/socialLinks";
+import { formatLikesLabel, formatSocialCount, formatViewsLabel } from "@/lib/socialStats";
 
 const { width } = Dimensions.get("window");
 const TILE = (width - 4) / 3;
@@ -29,11 +30,19 @@ export default function SocialProfileScreen() {
   const params = useLocalSearchParams();
   const rawId = Array.isArray(params.id) ? params.id[0] : params.id;
   const userId = rawId ? decodeURIComponent(String(rawId)) : null;
-  const { profile, posts, isLoading, error } = useSocialProfile(userId);
+  const { profile, posts, isLoading, error, toggleLike, recordView } = useSocialProfile(userId);
   const [activePost, setActivePost] = useState(null);
 
   const channels = useMemo(() => listedSocialChannels(profile), [profile]);
   const primaryChannel = channels[0];
+  const lightboxPost = useMemo(
+    () => (activePost ? posts.find((post) => post.id === activePost.id) || activePost : null),
+    [activePost, posts]
+  );
+
+  useEffect(() => {
+    if (lightboxPost?.id) recordView(lightboxPost.id);
+  }, [lightboxPost?.id, recordView]);
 
   const openChannel = async (channel) => {
     if (!channel?.url) return;
@@ -189,7 +198,15 @@ export default function SocialProfileScreen() {
                 activeOpacity={0.9}
                 onPress={() => setActivePost(post)}
               >
-                <Image source={{ uri: post.media_url }} style={styles.tile} />
+                <View style={styles.tileWrap}>
+                  <Image source={{ uri: post.media_url }} style={styles.tile} />
+                  <View style={styles.tileStats}>
+                    <Heart size={11} color="#fff" fill="#fff" />
+                    <Text style={styles.tileStatText}>{formatSocialCount(post.likes)}</Text>
+                    <Eye size={11} color="#fff" />
+                    <Text style={styles.tileStatText}>{formatSocialCount(post.views)}</Text>
+                  </View>
+                </View>
               </TouchableOpacity>
             ))}
           </View>
@@ -209,15 +226,31 @@ export default function SocialProfileScreen() {
           >
             <X size={22} color="#fff" />
           </TouchableOpacity>
-          {activePost ? (
+          {lightboxPost ? (
             <>
               <Image
-                source={{ uri: activePost.media_url }}
+                source={{ uri: lightboxPost.media_url }}
                 style={styles.lightboxImage}
                 resizeMode="contain"
               />
-              {activePost.caption ? (
-                <Text style={styles.lightboxCaption}>{activePost.caption}</Text>
+              <View style={styles.lightboxMeta}>
+                <TouchableOpacity
+                  style={styles.lightboxLike}
+                  onPress={() => toggleLike(lightboxPost.id)}
+                  hitSlop={8}
+                >
+                  <Heart
+                    size={22}
+                    color={lightboxPost.liked ? "#ED4956" : "#fff"}
+                    fill={lightboxPost.liked ? "#ED4956" : "transparent"}
+                  />
+                </TouchableOpacity>
+                <Text style={styles.lightboxStats}>
+                  {formatLikesLabel(lightboxPost.likes)} · {formatViewsLabel(lightboxPost.views)}
+                </Text>
+              </View>
+              {lightboxPost.caption ? (
+                <Text style={styles.lightboxCaption}>{lightboxPost.caption}</Text>
               ) : null}
             </>
           ) : null}
@@ -389,10 +422,34 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 2,
   },
+  tileWrap: {
+    width: TILE,
+    height: TILE,
+    overflow: "hidden",
+    backgroundColor: "#EEE",
+  },
   tile: {
     width: TILE,
     height: TILE,
     backgroundColor: "#EEE",
+  },
+  tileStats: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 5,
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  tileStatText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "700",
+    marginRight: 6,
   },
   empty: {
     textAlign: "center",
@@ -417,7 +474,25 @@ const styles = StyleSheet.create({
   },
   lightboxImage: {
     width: "100%",
-    height: "70%",
+    height: "62%",
+  },
+  lightboxMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 16,
+    paddingHorizontal: 8,
+  },
+  lightboxLike: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  lightboxStats: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
   },
   lightboxCaption: {
     color: "#fff",

@@ -127,6 +127,7 @@ export default function EditProfileScreen() {
     id: member.id,
     name: fullname || member.name,
     avatar: avatarUri,
+    gender: member.gender,
   };
 
   return (
@@ -209,17 +210,19 @@ function Field({
   return (
     <View style={styles.field}>
       <Text style={styles.fieldLabel}>{label}</Text>
-      <TextInput
-        style={styles.fieldInput}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder || label}
-        placeholderTextColor="#B1B2B4"
-        keyboardType={keyboardType}
-        autoCapitalize={autoCapitalize}
-        includeFontPadding={false}
-        textAlignVertical="center"
-      />
+      <View style={styles.fieldInputRow}>
+        <TextInput
+          style={styles.fieldInput}
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder || label}
+          placeholderTextColor="#B1B2B4"
+          keyboardType={keyboardType}
+          autoCapitalize={autoCapitalize}
+          includeFontPadding={false}
+          textAlignVertical="center"
+        />
+      </View>
     </View>
   );
 }
@@ -227,7 +230,7 @@ function Field({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#F4F4F6",
   },
   flex: {
     flex: 1,
@@ -279,15 +282,26 @@ const styles = StyleSheet.create({
     color: "#666",
     marginBottom: 6,
   },
+  fieldInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 26,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    minHeight: 52,
+  },
   fieldInput: {
-    backgroundColor: "#F5F5F7",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: "#111",
-    minHeight: 48,
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#000000",
+    paddingVertical: 2,
+    paddingHorizontal: 0,
+    margin: 0,
+    minHeight: 22,
     includeFontPadding: false,
+    textAlignVertical: "center",
   },
   saveBtn: {
     marginTop: 12,

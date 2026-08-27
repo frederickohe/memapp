@@ -7,7 +7,12 @@ import { isAuthenticated } from "@/lib/authRouting";
 import { navigateToAuthenticatedApp } from "@/lib/authNavigation";
 
 function shouldBlockAuthAccess(state) {
-  return isAuthenticated(state) && state.onboardingComplete;
+  return (
+    isAuthenticated(state) &&
+    state.onboardingComplete &&
+    !state.localSignedOut &&
+    (!state.devicePinEnabled || state.pinUnlocked)
+  );
 }
 
 /**

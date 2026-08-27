@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import {
+  RefreshControl,
   StyleSheet,
   Text,
   View,
@@ -23,21 +24,19 @@ import {
   Flame,
   CalendarCheck,
   Lock,
-  DollarSign,
+  Award,
 } from "lucide-react-native";
+import { useVolunteerImpact } from "@/hooks/useVolunteerImpact";
+import {
+  buildVolunteerImpact,
+  formatCount,
+  milestoneImageSource,
+} from "@/lib/volunteerUtils";
 
-const MILESTONE_IMAGES = {
-  bronze: require("@/assets/images/milestones/bronze.png"),
-  platinum: require("@/assets/images/milestones/platinum.png"),
-  gold: require("@/assets/images/milestones/gold.png"),
-};
-
-// Rank progress ring geometry (draws on first load).
 const RANK_RING_SIZE = 192;
 const RANK_RING_STROKE = 12;
 const RANK_RING_R = (RANK_RING_SIZE - RANK_RING_STROKE) / 2;
 const RANK_RING_C = 2 * Math.PI * RANK_RING_R;
-const RANK_PROGRESS = 0.83;
 
 const AnimatedCircle = Reanimated.createAnimatedComponent(Circle);
 
@@ -46,7 +45,6 @@ const COLORS = {
   textDark: "#111827",
   textGray: "#6B7280",
   red: "#FF0000",
-  redBorder: "#EF4444",
   border: "#E5E7EB",
   track: "#F3F4F6",
   green: "#16A34A",
@@ -62,21 +60,32 @@ function StatCard({ icon, label, value, active }) {
   );
 }
 
-function MilestoneBadge({ image, label, locked, onPress }) {
+function MilestoneBadge({ image, label, locked, completed, onPress }) {
   const content = (
     <>
       <View
         style={[
           styles.badgeCircle,
           locked && styles.badgeCircleLocked,
+          completed && styles.badgeCircleCompleted,
         ]}
       >
-        {locked ? (
+        {locked && !image ? (
           <View style={styles.lockedInner}>
             <Lock size={20} color={COLORS.textDark} strokeWidth={2} />
           </View>
+        ) : image ? (
+          <Image
+            source={image}
+            style={[styles.badgeImage, locked && styles.badgeImageLocked]}
+            resizeMode="contain"
+          />
         ) : (
-          <Image source={image} style={styles.badgeImage} resizeMode="contain" />
+          <Award
+            size={36}
+            color={completed ? COLORS.green : COLORS.textGray}
+            strokeWidth={2}
+          />
         )}
       </View>
       <Text style={[styles.badgeLabel, locked && styles.badgeLabelLocked]}>
@@ -96,56 +105,45 @@ function MilestoneBadge({ image, label, locked, onPress }) {
   return <View style={styles.badgeItem}>{content}</View>;
 }
 
-function DuesBadge({ label, locked, active }) {
-  return (
-    <View style={styles.duesItem}>
-      <View
-        style={[
-          styles.duesSquare,
-          active && styles.duesSquareActive,
-          locked && styles.duesSquareLocked,
-        ]}
-      >
-        {locked ? (
-          <View style={styles.lockedInner}>
-            <Lock size={20} color={COLORS.textDark} strokeWidth={2} />
-          </View>
-        ) : (
-          <DollarSign size={36} color={COLORS.green} strokeWidth={2} />
-        )}
-      </View>
-      <Text style={[styles.badgeLabel, locked && styles.badgeLabelLocked]}>
-        {label}
-      </Text>
-    </View>
-  );
-}
-
 export default function AchievementsScreen() {
   const router = useRouter();
-  const progress = 0.83;
+  const { impact, isLoading, isRefreshing, refresh } = useVolunteerImpact();
 
-  // Draw the red rank ring on first load.
+  const progress = impact?.next_rank_progress ?? 0;
+  const points = impact?.volunteer_points ?? 0;
+  const pointsToNext = impact?.points_to_next ?? 0;
+  const nextTitle = impact?.next_rank_title;
+  const milestones =
+    impact?.milestones?.length > 0
+      ? impact.milestones
+      : buildVolunteerImpact().milestones;
+
   const ringProgress = useSharedValue(0);
   useEffect(() => {
     ringProgress.value = withDelay(
       200,
-      withTiming(RANK_PROGRESS, {
+      withTiming(progress, {
         duration: 1500,
         easing: Easing.out(Easing.cubic),
       })
     );
-  }, []);
+  }, [progress, ringProgress]);
 
   const rankRingProps = useAnimatedProps(() => ({
     strokeDashoffset: RANK_RING_C * (1 - ringProgress.value),
   }));
 
+  const openMilestone = (milestone) => {
+    router.push({
+      pathname: "/volunteer",
+      params: { id: milestone.id },
+    });
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <StatusBar barStyle="dark-content" />
 
-      {/* Header - Top App Bar */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Achievements</Text>
         <TouchableOpacity style={styles.headerButton} activeOpacity={0.7}>
@@ -156,123 +154,122 @@ export default function AchievementsScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing || isLoading} onRefresh={refresh} />
+        }
       >
-        {/* Rank Section */}
-        <View style={styles.rankSection}>
-          <View style={styles.ringWrapper}>
-            <Svg
-              width={RANK_RING_SIZE}
-              height={RANK_RING_SIZE}
-              style={StyleSheet.absoluteFill}
-            >
-              <Circle
-                cx={RANK_RING_SIZE / 2}
-                cy={RANK_RING_SIZE / 2}
-                r={RANK_RING_R}
-                stroke={COLORS.track}
-                strokeWidth={RANK_RING_STROKE}
-                fill="none"
-              />
-              <AnimatedCircle
-                cx={RANK_RING_SIZE / 2}
-                cy={RANK_RING_SIZE / 2}
-                r={RANK_RING_R}
-                stroke={COLORS.red}
-                strokeWidth={RANK_RING_STROKE}
-                fill="none"
-                strokeLinecap="round"
-                strokeDasharray={RANK_RING_C}
-                animatedProps={rankRingProps}
-                originX={RANK_RING_SIZE / 2}
-                originY={RANK_RING_SIZE / 2}
-                rotation={-90}
-              />
-            </Svg>
-            <View style={styles.ringCenter}>
-              <Text style={styles.rankLabel}>RANK</Text>
-              <Text style={styles.rankNumber}>#3</Text>
-              <Text style={styles.rankSub}>of 156</Text>
+          <View style={styles.rankSection}>
+            <View style={styles.ringWrapper}>
+              <Svg
+                width={RANK_RING_SIZE}
+                height={RANK_RING_SIZE}
+                style={StyleSheet.absoluteFill}
+              >
+                <Circle
+                  cx={RANK_RING_SIZE / 2}
+                  cy={RANK_RING_SIZE / 2}
+                  r={RANK_RING_R}
+                  stroke={COLORS.track}
+                  strokeWidth={RANK_RING_STROKE}
+                  fill="none"
+                />
+                <AnimatedCircle
+                  cx={RANK_RING_SIZE / 2}
+                  cy={RANK_RING_SIZE / 2}
+                  r={RANK_RING_R}
+                  stroke={COLORS.red}
+                  strokeWidth={RANK_RING_STROKE}
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeDasharray={RANK_RING_C}
+                  animatedProps={rankRingProps}
+                  originX={RANK_RING_SIZE / 2}
+                  originY={RANK_RING_SIZE / 2}
+                  rotation={-90}
+                />
+              </Svg>
+              <View style={styles.ringCenter}>
+                <Text style={styles.rankLabel}>RANK</Text>
+                <Text style={styles.rankNumber}>
+                  #{impact?.community_rank || 0}
+                </Text>
+                <Text style={styles.rankSub}>
+                  of {formatCount(impact?.total_members || 0)}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.rankInfo}>
+              <Text style={styles.rankTitle}>{impact?.rank_title || "Member"}</Text>
+              <Text style={styles.rankCaption}>
+                {formatCount(points)} points earned
+              </Text>
             </View>
           </View>
 
-          <View style={styles.rankInfo}>
-            <Text style={styles.rankTitle}>Gold Member</Text>
-            <Text style={styles.rankCaption}>1,250 points earned</Text>
-          </View>
-        </View>
-
-        {/* Section - Stats Cards Bento */}
-        <View style={styles.bentoRow}>
-          <StatCard
-            icon={<Flame size={26} color={COLORS.red} strokeWidth={2} />}
-            label="Hours Volunteered"
-            value="120"
-          />
-          <StatCard
-            icon={<CalendarCheck size={26} color={COLORS.green} strokeWidth={2} />}
-            label="Events Attended"
-            value="18"
-            active
-          />
-        </View>
-
-        {/* Section - Volunteering Milestones */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Volunteering Milestones</Text>
-            <TouchableOpacity activeOpacity={0.7}>
-              <Text style={styles.viewAll}>View all</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.badgeGrid}>
-            <MilestoneBadge image={MILESTONE_IMAGES.bronze} label="First Step" />
-            <MilestoneBadge image={MILESTONE_IMAGES.platinum} label="Helper" />
-            <MilestoneBadge
-              image={MILESTONE_IMAGES.gold}
-              label="Champion"
-              onPress={() => router.push("/volunteer")}
+          <View style={styles.bentoRow}>
+            <StatCard
+              icon={<Flame size={26} color={COLORS.red} strokeWidth={2} />}
+              label="Hours Volunteered"
+              value={formatCount(impact?.hours_volunteered || 0)}
             />
-            <MilestoneBadge label="Leader" locked />
-            <MilestoneBadge label="Legend" locked />
-          </View>
-        </View>
-
-        {/* Section - Financial Contributions */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Financial Contributions</Text>
-            <TouchableOpacity activeOpacity={0.7}>
-              <Text style={styles.viewAll}>View all</Text>
-            </TouchableOpacity>
+            <StatCard
+              icon={<CalendarCheck size={26} color={COLORS.green} strokeWidth={2} />}
+              label="Events Attended"
+              value={formatCount(impact?.events_attended || 0)}
+              active
+            />
           </View>
 
-          <View style={styles.duesRow}>
-            <DuesBadge label="Dues Master" active />
-            <DuesBadge label="Patron" locked />
-            <DuesBadge label="Benefactor" locked />
-          </View>
-        </View>
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Volunteering Milestones</Text>
+            </View>
 
-        {/* Section - Progress Tracking */}
-        <View style={styles.progressCard}>
-          <View style={styles.progressHeader}>
-            <Text style={styles.progressTitle}>Next Rank Progress</Text>
-            <View style={styles.progressPill}>
-              <Text style={styles.progressPillText}>83%</Text>
+            <View style={styles.badgeGrid}>
+              {milestones.map((milestone) => {
+                const completed = milestone.status === "completed";
+                const locked = milestone.status === "locked";
+                return (
+                  <MilestoneBadge
+                    key={milestone.id}
+                    image={milestoneImageSource(milestone.image_key)}
+                    label={milestone.name}
+                    locked={locked}
+                    completed={completed}
+                    onPress={() => openMilestone(milestone)}
+                  />
+                );
+              })}
             </View>
           </View>
 
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
-          </View>
+          <View style={styles.progressCard}>
+            <View style={styles.progressHeader}>
+              <Text style={styles.progressTitle}>Next Rank Progress</Text>
+              <View style={styles.progressPill}>
+                <Text style={styles.progressPillText}>
+                  {Math.round(progress * 100)}%
+                </Text>
+              </View>
+            </View>
 
-          <View style={styles.progressFooter}>
-            <Text style={styles.progressFooterText}>1,250 points</Text>
-            <Text style={styles.progressFooterText}>250 to go</Text>
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+            </View>
+
+            <View style={styles.progressFooter}>
+              <Text style={styles.progressFooterText}>
+                {formatCount(points)} points
+              </Text>
+              <Text style={styles.progressFooterText}>
+                {nextTitle
+                  ? `${formatCount(pointsToNext)} to ${nextTitle}`
+                  : "All milestones unlocked"}
+              </Text>
+            </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
     </SafeAreaView>
   );
 }
@@ -282,8 +279,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.bg,
   },
-
-  /* Header */
   header: {
     height: 64,
     flexDirection: "row",
@@ -302,14 +297,11 @@ const styles = StyleSheet.create({
   headerButton: {
     padding: 4,
   },
-
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 40,
     paddingBottom: 40,
   },
-
-  /* Rank Section */
   rankSection: {
     alignItems: "center",
     marginBottom: 40,
@@ -354,8 +346,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: COLORS.textDark,
   },
-
-  /* Stats Bento */
   bentoRow: {
     flexDirection: "row",
     gap: 16,
@@ -388,8 +378,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: COLORS.textDark,
   },
-
-  /* Sections */
   section: {
     marginBottom: 40,
   },
@@ -404,17 +392,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: COLORS.textDark,
   },
-  viewAll: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: COLORS.red,
-  },
-
-  /* Milestone badge grid */
   badgeGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
+    columnGap: 16,
     rowGap: 16,
   },
   badgeItem: {
@@ -435,9 +416,16 @@ const styles = StyleSheet.create({
   badgeCircleLocked: {
     backgroundColor: COLORS.bg,
   },
+  badgeCircleCompleted: {
+    borderWidth: 2,
+    borderColor: COLORS.green,
+  },
   badgeImage: {
     width: 78,
     height: 78,
+  },
+  badgeImageLocked: {
+    opacity: 0.45,
   },
   lockedInner: {
     opacity: 0.5,
@@ -451,36 +439,6 @@ const styles = StyleSheet.create({
   badgeLabelLocked: {
     color: COLORS.textGray,
   },
-
-  /* Financial dues */
-  duesRow: {
-    flexDirection: "row",
-    gap: 16,
-  },
-  duesItem: {
-    flex: 1,
-    alignItems: "center",
-  },
-  duesSquare: {
-    width: "100%",
-    height: 106,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.bg,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-  },
-  duesSquareActive: {
-    borderWidth: 2,
-    borderColor: COLORS.redBorder,
-  },
-  duesSquareLocked: {
-    backgroundColor: COLORS.bg,
-  },
-
-  /* Progress Tracking */
   progressCard: {
     backgroundColor: COLORS.bg,
     borderWidth: 1,

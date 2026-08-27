@@ -25,7 +25,7 @@ import { SocialAvatar } from "@/components/social/ReelItem";
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const signOut = useAuthStore((state) => state.signOut);
+  const logoutToWelcome = useAuthStore((state) => state.logoutToWelcome);
   const member = useUserProfile();
 
   const handleEditProfile = () => {
@@ -39,7 +39,7 @@ export default function ProfileScreen() {
         text: "Log Out",
         style: "destructive",
         onPress: async () => {
-          await signOut();
+          await logoutToWelcome();
           navigateToSignedOutApp(router);
         },
       },
@@ -53,7 +53,11 @@ export default function ProfileScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Profile</Text>
-        <TouchableOpacity style={styles.settingsButton} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.settingsButton}
+          activeOpacity={0.7}
+          onPress={() => router.push("/settings")}
+        >
           <Settings size={22} color="#111" />
         </TouchableOpacity>
       </View>
@@ -61,15 +65,18 @@ export default function ProfileScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Profile Card Section */}
         <View style={styles.profileCard}>
-          <SocialAvatar
-            person={{
-              id: member.id,
-              name: member.name,
-              avatar: member.avatar,
-            }}
-            size={90}
-            style={styles.avatar}
-          />
+          <View style={styles.avatarWrap}>
+            <SocialAvatar
+              person={{
+                id: member.id,
+                name: member.name,
+                avatar: member.avatar,
+                gender: member.gender,
+              }}
+              size={90}
+              style={styles.avatar}
+            />
+          </View>
           <Text style={styles.name}>{member.name}</Text>
           <View style={styles.idBadge}>
             <Text style={styles.idBadgeText}>MEMBER ID: {member.memberId}</Text>
@@ -212,7 +219,7 @@ export default function ProfileScreen() {
             <Text style={styles.editButtonText}>Edit Profile</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogOut} activeOpacity={0.8}>
-            <LogOut size={16} color="#FF3B30" style={{ marginRight: 8 }} />
+            <LogOut size={16} color="#FF0000" style={{ marginRight: 8 }} />
             <Text style={styles.logoutButtonText}>Log Out</Text>
           </TouchableOpacity>
         </View>
@@ -250,20 +257,25 @@ const styles = StyleSheet.create({
   },
   profileCard: {
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#F0F0F0",
-    paddingVertical: 24,
+    paddingVertical: 12,
     paddingHorizontal: 16,
     marginBottom: 26,
+  },
+  avatarWrap: {
+    marginBottom: 14,
+    borderRadius: 45,
+    backgroundColor: "#F5F5F7",
+    shadowColor: "#111111",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    elevation: 6,
   },
   avatar: {
     width: 90,
     height: 90,
     borderRadius: 45,
     backgroundColor: "#F5F5F7",
-    marginBottom: 14,
   },
   name: {
     fontSize: 20,
@@ -428,11 +440,11 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     paddingVertical: 14,
     borderWidth: 1.5,
-    borderColor: "#FFE2E2",
-    backgroundColor: "#FFF5F5",
+    borderColor: "#FF0000",
+    backgroundColor: "#FFFFFF",
   },
   logoutButtonText: {
-    color: "#FF3B30",
+    color: "#FF0000",
     fontSize: 14,
     fontWeight: "400",
   },

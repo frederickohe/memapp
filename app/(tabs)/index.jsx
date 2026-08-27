@@ -19,9 +19,14 @@ import { Bell, ChevronRight, Star, MapPin, Crown } from "lucide-react-native";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useUnreadNotificationCount } from "@/hooks/useNotifications";
 import { useImpactStories, useLatestNews, usePublishedNewsCount } from "@/hooks/useNews";
+import { useProminentProfiles } from "@/hooks/useProminentProfiles";
 import { usePublishedProgramsCount } from "@/hooks/usePrograms";
 import { useOpenSurveysCount } from "@/hooks/useSurveys";
+import { useVolunteerImpact } from "@/hooks/useVolunteerImpact";
+import ProfileAvatar from "@/components/ProfileAvatar";
 import { formatNewsUpdatesLabel } from "@/lib/newsUtils";
+import { shortProfileName } from "@/lib/profileUtils";
+import { formatCount } from "@/lib/volunteerUtils";
 
 const DARK = "#1D3108";
 const SUBTLE = "#4B5563";
@@ -33,7 +38,7 @@ const FALLBACK_STORIES = [
     title: "Youth Leadership Camp",
     summary: "Members spent the week building skills and serving their community.",
     image:
-      "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=600&q=80",
+      "https://images.unsplash.com/photo-1610441572339-bdf395d1c410?auto=format&fit=crop&w=600&q=80",
     isFallback: true,
     fallbackRoute: "/impact",
   },
@@ -42,7 +47,7 @@ const FALLBACK_STORIES = [
     title: "Branch Outreach Day",
     summary: "Volunteers hosted games, health checks, and family activities.",
     image:
-      "https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?auto=format&fit=crop&w=600&q=80",
+      "https://images.unsplash.com/photo-1660675134044-6f1990caba94?auto=format&fit=crop&w=600&q=80",
     isFallback: true,
     fallbackRoute: "/impact",
   },
@@ -54,7 +59,7 @@ const FALLBACK_NEWS = [
     title: "New Programs This Month",
     summary: "See the latest classes, camps, and member activities at your branch.",
     image:
-      "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=600&q=80",
+      "https://images.unsplash.com/photo-1630386226447-af0a955c1009?auto=format&fit=crop&w=600&q=80",
     isFallback: true,
     fallbackRoute: "/news",
   },
@@ -63,7 +68,7 @@ const FALLBACK_NEWS = [
     title: "Membership Updates",
     summary: "Stay current on branch news, events, and important notices.",
     image:
-      "https://images.unsplash.com/photo-1495020689067-958852a7765d?auto=format&fit=crop&w=600&q=80",
+      "https://images.unsplash.com/photo-1680801237121-13222ddd73ba?auto=format&fit=crop&w=600&q=80",
     isFallback: true,
     fallbackRoute: "/news",
   },
@@ -72,8 +77,6 @@ const FALLBACK_NEWS = [
 const { width: SCREEN_W } = Dimensions.get("window");
 // Points card inner width: screen padding (16*2) + card padding (16*2).
 const CARD_INNER_W = SCREEN_W - 32 - 32;
-const PROGRESS_RATIO = 0.61;
-const FILL_W = CARD_INNER_W * PROGRESS_RATIO;
 const GLARE_W = 90;
 
 // Greeting block: remaining gap after the 32px header row + 23px text.
@@ -84,13 +87,22 @@ export default function HomeScreen() {
   const profile = useUserProfile();
   const unreadCount = useUnreadNotificationCount();
   const { stories: impactStories } = useImpactStories(5);
+  const { profiles: prominentProfiles } = useProminentProfiles(12);
   const { articles: latestNews } = useLatestNews(5);
   const newsCount = usePublishedNewsCount();
   const programsCount = usePublishedProgramsCount();
   const surveysCount = useOpenSurveysCount();
+  const { impact } = useVolunteerImpact();
 
   const stories = impactStories.length > 0 ? impactStories : FALLBACK_STORIES;
   const newsItems = latestNews.length > 0 ? latestNews : FALLBACK_NEWS;
+  const volunteerPoints = impact?.volunteer_points ?? 0;
+  const progressRatio = impact?.next_rank_progress ?? 0;
+  const fillW = CARD_INNER_W * progressRatio;
+  const rankPillLabel = (impact?.rank_title || "Member").toUpperCase();
+  const pointsToNextLabel = impact?.next_rank_title
+    ? `${formatCount(impact.points_to_next)} pts to ${impact.next_rank_title}`
+    : "All volunteer milestones unlocked";
 
   const branchLabel =
     profile.branch === "—" ? "Your Branch" : `${profile.branch} Branch`;
@@ -138,16 +150,8 @@ export default function HomeScreen() {
 
   const glareTranslate = shimmer.interpolate({
     inputRange: [0, 1],
-    outputRange: [-GLARE_W, FILL_W],
+    outputRange: [-GLARE_W, fillW],
   });
-
-  const prominentProfiles = [
-    { id: "chatime", name: "Chatime", logo: require("@/assets/logos/chatime.png") },
-    { id: "informa", name: "Informa", logo: require("@/assets/logos/informa.png") },
-    { id: "zara", name: "Zara", logo: require("@/assets/logos/zara.png") },
-    { id: "hm", name: "H&M", logo: require("@/assets/logos/hm.png") },
-    { id: "starbucks", name: "Starbucks", logo: require("@/assets/logos/starbucks.png") },
-  ];
 
   const categories = useMemo(
     () => [
@@ -156,7 +160,7 @@ export default function HomeScreen() {
         title: "News & Updates",
         subtitle: formatNewsUpdatesLabel(newsCount),
         image:
-          "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=600&q=80",
+          "https://images.unsplash.com/photo-1669418989936-fae7f3cebd56?auto=format&fit=crop&w=1200&q=80",
         route: "/news",
       },
       {
@@ -164,7 +168,7 @@ export default function HomeScreen() {
         title: "Y Social",
         subtitle: "Posts & impact",
         image:
-          "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1648301033733-44554c74ec50?auto=format&fit=crop&w=1200&q=80",
         route: "/social",
       },
       {
@@ -177,7 +181,7 @@ export default function HomeScreen() {
               ? "1 Program"
               : `${programsCount} Programs`,
         image:
-          "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1610441572339-bdf395d1c410?auto=format&fit=crop&w=1200&q=80",
         route: "/programs",
       },
       {
@@ -190,7 +194,7 @@ export default function HomeScreen() {
               ? "1 Survey"
               : `${surveysCount} Surveys`,
         image:
-          "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=800&q=80",
+          "https://images.unsplash.com/photo-1632215861513-130b66fe97f4?auto=format&fit=crop&w=1200&q=80",
         route: "/surveys",
       },
     ],
@@ -284,7 +288,7 @@ export default function HomeScreen() {
               <View style={styles.coin}>
                 <Star size={8} color="#fff" fill="#fff" />
               </View>
-              <Text style={styles.pointsValue}>15,240</Text>
+              <Text style={styles.pointsValue}>{formatCount(volunteerPoints)}</Text>
               <Text style={styles.pointsLabel}>Points</Text>
             </View>
             <LinearGradient
@@ -293,13 +297,15 @@ export default function HomeScreen() {
               end={{ x: 1, y: 1 }}
               style={styles.goldPill}
             >
-              <Text style={styles.goldPillText}>GOLD MEMBER</Text>
+              <Text style={styles.goldPillText} numberOfLines={1}>
+                {rankPillLabel}
+              </Text>
               <Crown size={12} color="#fff" fill="#fff" />
             </LinearGradient>
           </View>
 
           <View style={styles.progressTrack}>
-            <View style={styles.progressFill}>
+            <View style={[styles.progressFill, { width: `${Math.max(progressRatio * 100, 0)}%` }]}>
               <Animated.View
                 style={[
                   styles.glare,
@@ -319,7 +325,7 @@ export default function HomeScreen() {
               </Animated.View>
             </View>
           </View>
-          <Text style={styles.pointsToNext}>4,760 pts to Platinum</Text>
+          <Text style={styles.pointsToNext}>{pointsToNextLabel}</Text>
 
           <TouchableOpacity
             style={styles.qrButton}
@@ -350,31 +356,44 @@ export default function HomeScreen() {
           {stories.map(renderStoryCard)}
         </ScrollView>
 
-        <View style={[styles.sectionHeader, styles.sectionHeaderSpaced]}>
-          <Text style={styles.sectionTitle}>Featured Stores</Text>
-          <TouchableOpacity style={styles.viewAll} activeOpacity={0.7}>
-            <Text style={styles.viewAllText}>View All</Text>
-            <ChevronRight size={16} color={DARK} strokeWidth={2} />
-          </TouchableOpacity>
-        </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.hScroll}
-        >
-          {prominentProfiles.map((brand) => (
-            <View key={brand.id} style={styles.profileItem}>
-              <View style={styles.logoBox}>
-                <Image
-                  source={brand.logo}
-                  style={styles.logoImage}
-                  resizeMode="contain"
-                />
-              </View>
-              <Text style={styles.profileName}>{brand.name}</Text>
+        {prominentProfiles.length > 0 ? (
+          <>
+            <View style={[styles.sectionHeader, styles.sectionHeaderSpaced]}>
+              <Text style={styles.sectionTitle}>Prominent Profiles</Text>
+              <TouchableOpacity
+                style={styles.viewAll}
+                activeOpacity={0.7}
+                onPress={() => router.push("/profiles")}
+              >
+                <Text style={styles.viewAllText}>View All</Text>
+                <ChevronRight size={16} color={DARK} strokeWidth={2} />
+              </TouchableOpacity>
             </View>
-          ))}
-        </ScrollView>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.hScroll}
+            >
+              {prominentProfiles.map((person) => (
+                <TouchableOpacity
+                  key={person.id}
+                  style={styles.profileItem}
+                  activeOpacity={0.85}
+                  onPress={() => router.push(`/profiles/${person.id}`)}
+                >
+                  <ProfileAvatar
+                    name={person.fullName}
+                    photoUrl={person.photoUrl}
+                    size={64}
+                  />
+                  <Text style={styles.profileName} numberOfLines={1}>
+                    {shortProfileName(person.fullName)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </>
+        ) : null}
 
         {/* Category Cards */}
         <View style={styles.categoriesList}>
@@ -552,6 +571,7 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 40,
     paddingHorizontal: 8,
+    maxWidth: "58%",
   },
   goldPillText: {
     color: "#FFFFFF",
@@ -568,7 +588,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   progressFill: {
-    width: `${PROGRESS_RATIO * 100}%`,
     height: "100%",
     borderRadius: 24,
     backgroundColor: "#FF0000",
@@ -589,8 +608,6 @@ const styles = StyleSheet.create({
   },
   qrButton: {
     backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#000",
     borderRadius: 40,
     height: 48,
     flexDirection: "row",
@@ -668,27 +685,13 @@ const styles = StyleSheet.create({
   profileItem: {
     alignItems: "center",
     marginRight: 16,
-    width: 56,
-  },
-  logoBox: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: CARD_BG,
-    justifyContent: "center",
-    alignItems: "center",
-    overflow: "hidden",
-    padding: 8,
-  },
-  logoImage: {
-    width: "100%",
-    height: "100%",
+    width: 72,
   },
   profileName: {
     fontSize: 12,
     lineHeight: 19,
     color: DARK,
-    marginTop: 4,
+    marginTop: 6,
     textAlign: "center",
   },
   categoriesList: {

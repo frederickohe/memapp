@@ -1,5 +1,6 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import {
+  ActivityIndicator,
   StyleSheet,
   Text,
   View,
@@ -9,15 +10,11 @@ import {
   Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  ChevronLeft,
-  Pencil,
-  Trash2,
-  BookOpen,
-  Package,
-  Laptop,
+  ArrowLeft,
   ArrowRight,
+  Award,
 } from "lucide-react-native";
 import Svg, {
   Circle,
@@ -32,6 +29,13 @@ import Reanimated, {
   withDelay,
   Easing,
 } from "react-native-reanimated";
+import { useVolunteerImpact } from "@/hooks/useVolunteerImpact";
+import {
+  contributionIcon,
+  formatHoursLabel,
+  formatVolunteerDate,
+  milestoneImageSource,
+} from "@/lib/volunteerUtils";
 
 const COLORS = {
   bg: "#FFFFFF",
@@ -44,100 +48,99 @@ const COLORS = {
   pinkBorder: "#FEE2E2",
   grayBg: "#F9FAFB",
   border: "#F3F4F6",
-  circleBorder: "#D4D8E0",
 };
 
-// Circular progress ring geometry (community championship level).
 const RING_SIZE = 224;
 const RING_STROKE = 12;
 const RING_R = (RING_SIZE - RING_STROKE) / 2;
 const RING_C = 2 * Math.PI * RING_R;
-const LEVEL_PROGRESS = 0.85; // 85% toward the next championship level
 
 const AnimatedCircle = Reanimated.createAnimatedComponent(Circle);
 
-const contributions = [
-  {
-    id: "c1",
-    title: "Park Cleanup Drive",
-    meta: "Oct 12, 2023 • 3 Hours",
-    points: "+30 pts",
-    Icon: Trash2,
-    accent: true,
-  },
-  {
-    id: "c2",
-    title: "Local Library Support",
-    meta: "Oct 05, 2023 • 4 Hours",
-    points: "+40 pts",
-    Icon: BookOpen,
-    accent: false,
-  },
-  {
-    id: "c3",
-    title: "Food Bank Sorting",
-    meta: "Sep 28, 2023 • 2 Hours",
-    points: "+20 pts",
-    Icon: Package,
-    accent: false,
-  },
-  {
-    id: "c4",
-    title: "Senior Tech Help",
-    meta: "Sep 20, 2023 • 2 Hours",
-    points: "+20 pts",
-    Icon: Laptop,
-    accent: true,
-  },
-];
-
 export default function VolunteerScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const milestoneId = Array.isArray(params.id) ? params.id[0] : params.id;
+  const { impact, isLoading, error, refresh } = useVolunteerImpact();
 
-  // Draw the progress ring on first load.
+  const milestone = useMemo(() => {
+    const milestones = impact?.milestones || [];
+    if (!milestones.length) return null;
+    return (
+      milestones.find((item) => item.id === milestoneId) ||
+      milestones.find((item) => item.status === "in_progress") ||
+      milestones.find((item) => item.id === impact?.current_milestone_id) ||
+      milestones[0]
+    );
+  }, [impact, milestoneId]);
+
+  const hours = impact?.hours_volunteered || 0;
+  const viewingCompleted = milestone?.status === "completed";
+  const goalHours =
+    viewingCompleted && milestone?.next_hours_required
+      ? milestone.next_hours_required
+      : milestone?.hours_required || 0;
+  const progressValue =
+    goalHours > 0 ? Math.min(1, hours / goalHours) : milestone?.progress ?? 0;
+  const remainingHours = Math.max(0, goalHours - hours);
+  const nextName = milestone?.next_name;
+  const imageSource = milestoneImageSource(milestone?.image_key);
+  const contributions = impact?.recent_contributions || [];
+
   const progress = useSharedValue(0);
-
   useEffect(() => {
+    progress.value = 0;
     progress.value = withDelay(
       250,
-      withTiming(LEVEL_PROGRESS, {
+      withTiming(progressValue, {
         duration: 1600,
         easing: Easing.out(Easing.cubic),
       })
     );
-  }, []);
+  }, [progress, progressValue]);
 
   const ringProps = useAnimatedProps(() => ({
     strokeDashoffset: RING_C * (1 - progress.value),
   }));
 
+  if (isLoading && !impact) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={COLORS.red} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <StatusBar barStyle="dark-content" />
 
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
-          style={styles.circleBtn}
+          style={styles.backButton}
           activeOpacity={0.7}
           onPress={() => router.back()}
         >
-          <ChevronLeft size={22} color="#636268" />
+          <ArrowLeft size={24} color="#111" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Volunteer</Text>
-        <TouchableOpacity style={styles.circleBtn} activeOpacity={0.7}>
-          <Pencil size={20} color="#B1B2B4" />
-        </TouchableOpacity>
+        <View style={{ width: 24 }} />
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Hero Section */}
+        {error && !milestone ? (
+          <TouchableOpacity onPress={refresh} style={styles.retryButton}>
+            <Text style={styles.retryText}>{error}. Try again</Text>
+          </TouchableOpacity>
+        ) : null}
+
         <View style={styles.hero}>
           <View style={styles.ringWrapper}>
-            {/* Animated progress ring */}
             <Svg width={RING_SIZE} height={RING_SIZE} style={StyleSheet.absoluteFill}>
               <Defs>
                 <SvgGradient id="goldRing" x1="0" y1="0" x2="1" y2="1">
@@ -146,7 +149,6 @@ export default function VolunteerScreen() {
                   <Stop offset="1" stopColor="#B8760A" />
                 </SvgGradient>
               </Defs>
-              {/* Track */}
               <Circle
                 cx={RING_SIZE / 2}
                 cy={RING_SIZE / 2}
@@ -155,7 +157,6 @@ export default function VolunteerScreen() {
                 strokeWidth={RING_STROKE}
                 fill="none"
               />
-              {/* Progress */}
               <AnimatedCircle
                 cx={RING_SIZE / 2}
                 cy={RING_SIZE / 2}
@@ -172,105 +173,138 @@ export default function VolunteerScreen() {
               />
             </Svg>
 
-            {/* Gold badge inside the ring */}
             <View style={styles.badge}>
-              <Image
-                source={require("@/assets/images/milestones/gold.png")}
-                style={styles.badgeImage}
-                resizeMode="contain"
-              />
-              <Text style={styles.badgeLevel}>LEVEL 8</Text>
+              {imageSource ? (
+                <Image
+                  source={imageSource}
+                  style={styles.badgeImage}
+                  resizeMode="contain"
+                />
+              ) : (
+                <Award size={88} color="#E6A817" strokeWidth={1.6} />
+              )}
+              <Text style={styles.badgeLevel}>
+                LEVEL {milestone?.level || 1}
+              </Text>
             </View>
           </View>
 
-          <Text style={styles.heroTitle}>Gold Volunteer</Text>
+          <Text style={styles.heroTitle}>{milestone?.title || "Volunteer"}</Text>
           <Text style={styles.heroSubtitle}>
-            You're in the top 15% of volunteers — Community Championship Level 8.
+            {milestone?.status === "completed"
+              ? `You've unlocked ${milestone?.name}. Keep volunteering to reach the next milestone.`
+              : `You're working toward ${milestone?.name}. Log approved hours to unlock this milestone.`}
           </Text>
         </View>
 
-        {/* Progress Tracking */}
         <View style={styles.card}>
           <View style={styles.progressTop}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.progressLabel}>Progress to Platinum</Text>
-              <Text style={styles.progressValue}>85 Hours</Text>
+              <Text style={styles.progressLabel}>
+                {milestone?.status === "completed" && nextName
+                  ? `Progress to ${nextName}`
+                  : `Progress to ${milestone?.name || "next milestone"}`}
+              </Text>
+              <Text style={styles.progressValue}>{formatHoursLabel(hours)}</Text>
             </View>
             <View style={styles.percentPill}>
-              <Text style={styles.percentPillText}>85%</Text>
+              <Text style={styles.percentPillText}>
+                {Math.round(progressValue * 100)}%
+              </Text>
             </View>
           </View>
 
           <View style={styles.progressTrack}>
             <View
-              style={[styles.progressFill, { width: `${LEVEL_PROGRESS * 100}%` }]}
+              style={[styles.progressFill, { width: `${progressValue * 100}%` }]}
             />
           </View>
           <View style={styles.progressFooter}>
-            <Text style={styles.footerMuted}>85 hours completed</Text>
-            <Text style={styles.footerDark}>100 hours goal</Text>
+            <Text style={styles.footerMuted}>
+              {formatHoursLabel(hours)} completed
+            </Text>
+            <Text style={styles.footerDark}>
+              {formatHoursLabel(goalHours)} goal
+            </Text>
           </View>
 
           <View style={styles.statRow}>
             <View style={styles.statCard}>
-              <Text style={styles.statNumberRed}>12</Text>
+              <Text style={styles.statNumberRed}>
+                {impact?.events_attended || 0}
+              </Text>
               <Text style={styles.statLabel}>Events Joined</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statNumberGray}>#3</Text>
+              <Text style={styles.statNumberGray}>
+                #{impact?.community_rank || 0}
+              </Text>
               <Text style={styles.statLabel}>Community Rank</Text>
             </View>
           </View>
         </View>
 
-        {/* Recent Contributions */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Recent Contributions</Text>
-          <TouchableOpacity activeOpacity={0.7}>
-            <Text style={styles.viewAll}>View All</Text>
-          </TouchableOpacity>
         </View>
 
-        {contributions.map((item) => {
-          const Icon = item.Icon;
-          return (
-            <View key={item.id} style={styles.contribCard}>
-              <View
-                style={[
-                  styles.contribIcon,
-                  { backgroundColor: item.accent ? COLORS.pink : COLORS.grayBg },
-                ]}
-              >
-                <Icon
-                  size={20}
-                  color={item.accent ? COLORS.red : COLORS.gray}
-                  strokeWidth={2}
-                />
-              </View>
-              <View style={styles.contribBody}>
-                <Text style={styles.contribTitle}>{item.title}</Text>
-                <Text style={styles.contribMeta}>{item.meta}</Text>
-              </View>
-              <View
-                style={[
-                  styles.pointsPill,
-                  { backgroundColor: item.accent ? COLORS.pink : COLORS.grayBg },
-                ]}
-              >
-                <Text
+        {contributions.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyText}>
+              No volunteer hours submitted yet. Apply hours to start this milestone.
+            </Text>
+          </View>
+        ) : (
+          contributions.map((item, index) => {
+            const Icon = contributionIcon(item.title);
+            const accent = index % 2 === 0;
+            const pending = item.status === "pending";
+            const rejected = item.status === "rejected";
+            const pointsLabel = rejected
+              ? "Rejected"
+              : pending
+                ? "Pending"
+                : `+${item.points || 0} pts`;
+            return (
+              <View key={item.id} style={styles.contribCard}>
+                <View
                   style={[
-                    styles.pointsText,
-                    { color: item.accent ? COLORS.red : COLORS.gray },
+                    styles.contribIcon,
+                    { backgroundColor: accent ? COLORS.pink : COLORS.grayBg },
                   ]}
                 >
-                  {item.points}
-                </Text>
+                  <Icon
+                    size={20}
+                    color={accent ? COLORS.red : COLORS.gray}
+                    strokeWidth={2}
+                  />
+                </View>
+                <View style={styles.contribBody}>
+                  <Text style={styles.contribTitle}>{item.title}</Text>
+                  <Text style={styles.contribMeta}>
+                    {formatVolunteerDate(item.volunteer_date)} • {formatHoursLabel(item.hours)}
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    styles.pointsPill,
+                    { backgroundColor: accent ? COLORS.pink : COLORS.grayBg },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.pointsText,
+                      { color: accent ? COLORS.red : COLORS.gray },
+                    ]}
+                  >
+                    {pointsLabel}
+                  </Text>
+                </View>
               </View>
-            </View>
-          );
-        })}
+            );
+          })
+        )}
 
-        {/* CTA */}
         <TouchableOpacity
           style={styles.ctaButton}
           activeOpacity={0.9}
@@ -280,7 +314,13 @@ export default function VolunteerScreen() {
           <ArrowRight size={18} color="#FFFFFF" strokeWidth={2.2} />
         </TouchableOpacity>
         <Text style={styles.ctaSubtitle}>
-          Earn 15 more hours to unlock Platinum Tier
+          {milestone?.status === "completed"
+            ? nextName
+              ? `Keep going to unlock ${nextName}`
+              : "You've reached the highest volunteer milestone"
+            : remainingHours > 0
+              ? `Earn ${formatHoursLabel(remainingHours)} more to unlock ${milestone?.name || "this milestone"}`
+              : "Apply hours to start your first milestone"}
         </Text>
       </ScrollView>
     </SafeAreaView>
@@ -292,34 +332,41 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.bg,
   },
+  loadingWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 22,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
   },
-  circleBtn: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: COLORS.circleBorder,
-    alignItems: "center",
-    justifyContent: "center",
+  backButton: {
+    padding: 4,
   },
   headerTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#192126",
+    fontSize: 18,
+    fontWeight: "500",
+    color: "#111",
   },
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 40,
   },
-
-  /* Hero */
+  retryButton: {
+    marginBottom: 16,
+    alignItems: "center",
+  },
+  retryText: {
+    fontSize: 14,
+    color: COLORS.red,
+  },
   hero: {
     alignItems: "center",
     marginBottom: 35,
@@ -363,8 +410,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     paddingHorizontal: 10,
   },
-
-  /* Progress card */
   card: {
     backgroundColor: COLORS.bg,
     borderWidth: 1,
@@ -464,8 +509,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.brown,
   },
-
-  /* Section header */
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -477,13 +520,19 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: COLORS.dark,
   },
-  viewAll: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.red,
+  emptyCard: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 8,
   },
-
-  /* Contribution card */
+  emptyText: {
+    fontSize: 14,
+    color: COLORS.brown,
+    textAlign: "center",
+    lineHeight: 20,
+  },
   contribCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -524,8 +573,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
   },
-
-  /* CTA */
   ctaButton: {
     backgroundColor: "#000000",
     borderRadius: 16,
