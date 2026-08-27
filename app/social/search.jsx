@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   StatusBar,
   StyleSheet,
   Text,
@@ -14,7 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ChevronLeft, Search } from "lucide-react-native";
 import { useSocialSearch } from "@/hooks/useSocial";
-import { avatarUri } from "@/components/social/ReelItem";
+import { SocialAvatar, socialProfileHref } from "@/components/social/ReelItem";
 
 export default function SocialSearchScreen() {
   const router = useRouter();
@@ -59,11 +58,11 @@ export default function SocialSearchScreen() {
               style={styles.row}
               activeOpacity={0.8}
               onPress={() => {
-                if (!item.id) return;
-                router.push(`/social/profile/${item.id}`);
+                const href = socialProfileHref(item.id);
+                if (href) router.push(href);
               }}
             >
-              <Image source={{ uri: avatarUri(item) }} style={styles.avatar} />
+              <SocialAvatar person={item} size={48} style={styles.avatar} />
               <View style={styles.meta}>
                 <Text style={styles.name}>{item.name}</Text>
                 <Text style={styles.handle}>

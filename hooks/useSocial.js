@@ -9,6 +9,18 @@ import {
 } from "@/lib/api/social";
 import { useAuthStore } from "@/stores/useAuthStore";
 
+const YMCA_PROFILE = {
+  id: "ymca",
+  name: "YMCA Ghana",
+  handle: "ymcaghana",
+  branch: "National",
+  occupation: "Ghana National Council",
+  skills: [],
+  points: 0,
+  post_count: 0,
+  is_self: false,
+};
+
 export function useSocialFeed() {
   const token = useAuthStore((state) => state.token);
   const [items, setItems] = useState([]);
@@ -124,7 +136,12 @@ export function useSocialProfile(userId) {
       setProfile(profileData);
       setPosts(postsData?.items || []);
     } catch (err) {
-      setError(err.message || "Unable to load profile");
+      if (userId === "ymca") {
+        setProfile(YMCA_PROFILE);
+        setPosts([]);
+      } else {
+        setError(err.message || "Unable to load profile");
+      }
     } finally {
       setIsLoading(false);
     }

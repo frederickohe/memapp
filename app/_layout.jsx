@@ -105,6 +105,7 @@ export default function RootLayout() {
           <Stack.Screen name="connect-user" />
           <Stack.Screen name="connect-list" />
           <Stack.Screen name="connect-profile" />
+          <Stack.Screen name="edit-profile" />
           <Stack.Screen name="programs" />
           <Stack.Screen name="surveys" />
           <Stack.Screen name="affiliation" />

@@ -3,7 +3,6 @@ import {
   StyleSheet,
   Text,
   View,
-  Image,
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
@@ -14,21 +13,15 @@ import {
   User,
   MapPin,
   Calendar,
-  CreditCard,
   Settings,
   LogOut,
   Mail,
   Smartphone,
-  ChevronRight,
-  ShieldAlert,
 } from "lucide-react-native";
-import { scaleFont } from "@/components/scale";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { navigateToSignedOutApp } from "@/lib/authNavigation";
 import { useUserProfile } from "@/hooks/useUserProfile";
-
-const DEFAULT_AVATAR =
-  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80";
+import { SocialAvatar } from "@/components/social/ReelItem";
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -36,7 +29,7 @@ export default function ProfileScreen() {
   const member = useUserProfile();
 
   const handleEditProfile = () => {
-    Alert.alert("Edit Profile", "Profile editing is not available in demo mode.");
+    router.push("/edit-profile");
   };
 
   const handleLogOut = () => {
@@ -68,8 +61,13 @@ export default function ProfileScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Profile Card Section */}
         <View style={styles.profileCard}>
-          <Image
-            source={{ uri: member.avatar || DEFAULT_AVATAR }}
+          <SocialAvatar
+            person={{
+              id: member.id,
+              name: member.name,
+              avatar: member.avatar,
+            }}
+            size={90}
             style={styles.avatar}
           />
           <Text style={styles.name}>{member.name}</Text>

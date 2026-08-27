@@ -17,7 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ChevronLeft, Flame, Grid3x3, X } from "lucide-react-native";
 import { useSocialProfile } from "@/hooks/useSocial";
-import { avatarUri } from "@/components/social/ReelItem";
+import { SocialAvatar } from "@/components/social/ReelItem";
 import { SocialIcon } from "@/components/SocialIcons";
 import { listedSocialChannels } from "@/lib/socialLinks";
 
@@ -81,7 +81,7 @@ export default function SocialProfileScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.identity}>
-          <Image source={{ uri: avatarUri(profile) }} style={styles.avatar} />
+          <SocialAvatar person={profile} size={86} style={styles.avatar} />
           <View style={styles.stats}>
             <View style={styles.stat}>
               <Text style={styles.statValue}>{profile.post_count}</Text>
@@ -135,7 +135,9 @@ export default function SocialProfileScreen() {
             <Text style={styles.sectionTitle}>Connect on Social</Text>
             {channels.length === 0 ? (
               <Text style={styles.emptyHandles}>
-                This member has not listed any social handles yet.
+                {profile.id === "ymca"
+                  ? "Official YMCA Ghana posts and programs appear here in the feed."
+                  : "This member has not listed any social handles yet."}
               </Text>
             ) : (
               channels.map((item) => (

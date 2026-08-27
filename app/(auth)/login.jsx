@@ -97,6 +97,8 @@ export default function LoginScreen() {
                 autoCorrect={false}
                 autoComplete="email"
                 textContentType="emailAddress"
+                includeFontPadding={false}
+                textAlignVertical="center"
                 value={username}
                 onChangeText={(value) => {
                   setUsername(value);
@@ -111,6 +113,8 @@ export default function LoginScreen() {
                 placeholder="Password"
                 placeholderTextColor="#B1B2B4"
                 secureTextEntry={!showPassword}
+                includeFontPadding={false}
+                textAlignVertical="center"
                 value={password}
                 onChangeText={(value) => {
                   setPassword(value);
@@ -216,23 +220,27 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 26,
     paddingHorizontal: 20,
-    paddingVertical: 12,
-    minHeight: 48,
+    paddingVertical: 14,
+    minHeight: 52,
     gap: 8,
+    overflow: "visible",
   },
   atPrefix: {
     fontSize: 14,
     fontWeight: "500",
-    lineHeight: 24,
     color: "#000000",
   },
   input: {
     flex: 1,
     fontSize: 14,
     fontWeight: "500",
-    lineHeight: 24,
     color: "#000000",
-    padding: 0,
+    paddingVertical: 2,
+    paddingHorizontal: 0,
+    margin: 0,
+    minHeight: 22,
+    includeFontPadding: false,
+    textAlignVertical: "center",
   },
   eyeButton: {
     alignItems: "center",

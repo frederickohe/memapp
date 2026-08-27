@@ -12,7 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ChevronLeft, Plus, Search } from "lucide-react-native";
 import { useSocialFeed } from "@/hooks/useSocial";
-import ReelItem from "@/components/social/ReelItem";
+import ReelItem, { socialProfileHref } from "@/components/social/ReelItem";
 
 export default function YSocialFeedScreen() {
   const router = useRouter();
@@ -80,8 +80,8 @@ export default function YSocialFeedScreen() {
               item={item}
               onLike={toggleLike}
               onOpenProfile={(id) => {
-                if (!id || id === "ymca") return;
-                router.push(`/social/profile/${id}`);
+                const href = socialProfileHref(id);
+                if (href) router.push(href);
               }}
               onOpenSource={openSource}
             />

@@ -9,7 +9,7 @@ import {
   signOut as signOutRequest,
 } from "@/lib/api/auth";
 import { buildSignupPayload } from "@/lib/signupPayload";
-import { getCurrentUser } from "@/lib/api/user";
+import { getCurrentUser, updateCurrentUser } from "@/lib/api/user";
 import { isAuthenticated, resolveInitialRoute } from "@/lib/authRouting";
 
 function extractAuthPayload(response) {
@@ -221,6 +221,34 @@ export const useAuthStore = create(
 
       completeOnboarding: () =>
         set({ onboardingComplete: true, signupInProgress: false }),
+
+      updateProfile: async (payload) => {
+        const { token, user: currentUser } = get();
+        if (!token) {
+          return { success: false, error: new Error("Missing auth token") };
+        }
+
+        set({ isLoading: true, error: null });
+        try {
+          const updated = await updateCurrentUser(payload, token, {
+            email: currentUser?.email || get().email,
+          });
+          const user = updated?.id ? updated : { ...currentUser, ...payload };
+          set({
+            user,
+            email: user?.email || get().email,
+            phone: user?.phone_number || get().phone,
+            isLoading: false,
+          });
+          return { success: true, user };
+        } catch (error) {
+          set({
+            isLoading: false,
+            error: error.message || "Unable to update profile",
+          });
+          return { success: false, error };
+        }
+      },
 
       fetchProfile: async () => {
         const { token, user: currentUser } = get();

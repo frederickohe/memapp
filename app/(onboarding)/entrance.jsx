@@ -17,8 +17,7 @@ export default function EntranceScreen() {
 
   const branch =
     user?.current_branch || currentBranch || "Madina";
-  const memberId =
-    user?.member_id || membershipId || "YID2834938489";
+  const memberId = user?.member_id || membershipId || "";
 
   const handleDashboard = () => {
     completeOnboarding();
@@ -35,7 +34,9 @@ export default function EntranceScreen() {
           <Text style={styles.line}>
             {`You are Part of\nYmca ${branch} Branch`}
           </Text>
-          <Text style={styles.line}>{`Your Member ID is ${memberId}`}</Text>
+          {memberId ? (
+            <Text style={styles.line}>{`Your Member ID is ${memberId}`}</Text>
+          ) : null}
         </View>
       </View>
       <View style={styles.footer}>

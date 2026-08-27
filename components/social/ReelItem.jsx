@@ -1,4 +1,6 @@
-import { Dimensions, Image, Pressable, Share, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Dimensions, Image, Share, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Link } from "expo-router";
 import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 
@@ -6,15 +8,99 @@ const YMCA_LOGO = require("@/assets/images/auth/ymca-africa-alliance.png");
 const { width: SCREEN_W } = Dimensions.get("window");
 const MEDIA_H = Math.round(SCREEN_W * 1.05);
 
+function initialsFromName(name) {
+  const parts = String(name || "Member")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+  return (parts[0] || "M").slice(0, 2).toUpperCase();
+}
+
 export function avatarUri(author) {
-  if (author?.avatar) return author.avatar;
-  const name = encodeURIComponent(author?.name || "Member");
-  return `https://ui-avatars.com/api/?name=${name}&background=111111&color=ffffff&size=128`;
+  const raw = typeof author?.avatar === "string" ? author.avatar.trim() : "";
+  if (raw && /^(https?:|file:|data:)/i.test(raw)) return raw;
+  return null;
+}
+
+export function SocialAvatar({ person = {}, size = 36, style }) {
+  const isOrg = Boolean(person?.is_org || person?.id === "ymca");
+  const [failed, setFailed] = useState(false);
+  const uri = avatarUri(person);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [uri]);
+  const dimension = {
+    width: size,
+    height: size,
+    borderRadius: size / 2,
+    overflow: "hidden",
+    backgroundColor: "#EFEFEF",
+  };
+
+  if (isOrg) {
+    return (
+      <Image
+        source={YMCA_LOGO}
+        style={[dimension, style]}
+        resizeMode="cover"
+        pointerEvents="none"
+      />
+    );
+  }
+
+  if (uri && !failed) {
+    return (
+      <Image
+        source={{ uri }}
+        style={[dimension, style]}
+        resizeMode="cover"
+        pointerEvents="none"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+
+  return (
+    <View
+      style={[
+        dimension,
+        {
+          backgroundColor: "#111111",
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        style,
+      ]}
+      pointerEvents="none"
+    >
+      <Text
+        style={{
+          color: "#FFFFFF",
+          fontWeight: "700",
+          fontSize: Math.round(size * 0.34),
+        }}
+      >
+        {initialsFromName(person?.name || person?.handle)}
+      </Text>
+    </View>
+  );
+}
+
+export function socialProfileHref(userId) {
+  if (!userId) return null;
+  return {
+    pathname: "/social/profile/[id]",
+    params: { id: String(userId) },
+  };
 }
 
 export default function ReelItem({ item, onLike, onOpenProfile, onOpenSource }) {
   const author = item.author || {};
-  const isOrg = Boolean(author.is_org);
+  const profileHref = socialProfileHref(author.id);
 
   const handleLike = async () => {
     try {
@@ -38,42 +124,46 @@ export default function ReelItem({ item, onLike, onOpenProfile, onOpenSource }) 
   };
 
   const openAuthor = () => {
-    const userId = author?.id;
-    if (!userId || userId === "ymca") return;
-    onOpenProfile?.(userId);
+    if (profileHref) onOpenProfile?.(author.id);
   };
+
+  const authorIdentity = (
+    <>
+      <SocialAvatar person={author} size={36} style={styles.avatar} />
+      <View style={styles.authorMeta} pointerEvents="none">
+        <Text style={styles.handle}>@{author.handle || "ymcaghana"}</Text>
+        {item.category ? (
+          <Text style={styles.location} numberOfLines={1}>
+            {item.category}
+            {author.branch ? ` · ${author.branch}` : ""}
+          </Text>
+        ) : author.branch ? (
+          <Text style={styles.location} numberOfLines={1}>
+            {author.branch}
+          </Text>
+        ) : null}
+      </View>
+    </>
+  );
 
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Pressable
-          style={styles.authorRow}
-          onPress={openAuthor}
-          hitSlop={8}
-        >
-          {isOrg ? (
-            <Image source={YMCA_LOGO} style={styles.avatar} pointerEvents="none" />
-          ) : (
-            <Image
-              source={{ uri: avatarUri(author) }}
-              style={styles.avatar}
-              pointerEvents="none"
-            />
-          )}
-          <View style={styles.authorMeta} pointerEvents="none">
-            <Text style={styles.handle}>@{author.handle || "ymcaghana"}</Text>
-            {item.category ? (
-              <Text style={styles.location} numberOfLines={1}>
-                {item.category}
-                {author.branch ? ` · ${author.branch}` : ""}
-              </Text>
-            ) : author.branch ? (
-              <Text style={styles.location} numberOfLines={1}>
-                {author.branch}
-              </Text>
-            ) : null}
-          </View>
-        </Pressable>
+        {profileHref ? (
+          <Link href={profileHref} asChild>
+            <TouchableOpacity
+              style={styles.authorRow}
+              activeOpacity={0.7}
+              hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+              accessibilityRole="button"
+              accessibilityLabel={`Open @${author.handle || "member"} profile`}
+            >
+              {authorIdentity}
+            </TouchableOpacity>
+          </Link>
+        ) : (
+          <View style={styles.authorRow}>{authorIdentity}</View>
+        )}
         <TouchableOpacity onPress={() => onOpenSource?.(item)} hitSlop={10}>
           <MoreHorizontal size={22} color="#262626" />
         </TouchableOpacity>
@@ -148,7 +238,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flex: 1,
     marginRight: 12,
-    zIndex: 2,
   },
   avatar: {
     width: 36,

@@ -1,6 +1,6 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
@@ -26,6 +26,7 @@ import {
   isValidEmail,
   MIN_PASSWORD_LENGTH,
 } from "@/lib/authValidation";
+import { generateMemberId } from "@/lib/signupPayload";
 import { useSignupStore } from "@/stores/useSignupStore";
 
 const GENDER_MALE = require("@/assets/images/signup/gender-male.png");
@@ -137,6 +138,12 @@ export default function OnboardingStepperScreen() {
       return () => subscription.remove();
     }, [handleBack])
   );
+
+  useEffect(() => {
+    if (STEPS[currentStep]?.key === "membership" && !form.membershipId) {
+      setField("membershipId", generateMemberId());
+    }
+  }, [currentStep, form.membershipId, setField]);
 
   const handleNext = () => {
     if (currentStep < STEPS.length - 1) {
@@ -286,8 +293,11 @@ export default function OnboardingStepperScreen() {
             <SignupFormCard
               label="Membership ID"
               value={form.membershipId}
-              onChangeText={(value) => setField("membershipId", value)}
+              filled={Boolean(form.membershipId)}
             />
+            <Text style={styles.memberIdHint}>
+              This ID is generated for you. You cannot type your own.
+            </Text>
           </>
         );
 
@@ -466,6 +476,13 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     gap: 8,
+  },
+  memberIdHint: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: "#6B7280",
+    paddingHorizontal: 8,
+    paddingTop: 4,
   },
   footer: {
     paddingHorizontal: 24,
