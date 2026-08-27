@@ -134,7 +134,7 @@ export default function SettingsScreen() {
   const handleAbout = () => {
     const version =
       Constants.expoConfig?.version || Constants.nativeAppVersion || "1.0.0";
-    Alert.alert("About", `YMCA Member App\nVersion ${version}`);
+    Alert.alert("About", `YMCA App\nVersion ${version}`);
   };
 
   return (

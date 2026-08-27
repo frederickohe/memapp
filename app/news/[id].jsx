@@ -31,7 +31,7 @@ export default function BlogDetailScreen() {
     try {
       await Share.share({
         title: article.title,
-        message: `${article.title}\n\n${article.summary}\n\nRead more in the YMCA Member App!`,
+        message: `${article.title}\n\n${article.summary}\n\nRead more in the YMCA App!`,
       });
     } catch (shareError) {
       console.log("Error sharing: ", shareError.message);

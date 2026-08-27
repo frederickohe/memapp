@@ -89,6 +89,7 @@ export default function ProfileLoadingScreen({ message }) {
         <Image
           source={require("@/assets/images/icon.png")}
           style={styles.logo}
+          resizeMode="cover"
         />
 
         <View style={styles.spinnerWrap}>
@@ -127,6 +128,9 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   logo: {
+    width: 88,
+    height: 88,
+    borderRadius: 20,
     marginBottom: 8,
   },
   spinnerWrap: {

@@ -38,7 +38,7 @@ export default function ProgramDetailScreen() {
     try {
       await Share.share({
         title: program.title,
-        message: `${program.title}\n\n${program.summary}\n\nSee this program in the YMCA Member App.`,
+        message: `${program.title}\n\n${program.summary}\n\nSee this program in the YMCA App.`,
       });
     } catch (shareError) {
       console.log("Error sharing: ", shareError.message);

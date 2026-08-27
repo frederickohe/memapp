@@ -119,7 +119,7 @@ export default function ReelItem({ item, onLike, onOpenProfile, onOpenSource }) 
     try {
       await Share.share({
         title: label,
-        message: `${label}\n\nShared from Y Social in the YMCA Member App.`,
+        message: `${label}\n\nShared from Y Social in the YMCA App.`,
       });
     } catch {
       /* ignore */
