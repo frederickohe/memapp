@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import { useCallback } from "react";
 import {
   StyleSheet,
   Text,
@@ -9,6 +10,7 @@ import {
   StatusBar,
   Alert,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   User,
   MapPin,
@@ -26,7 +28,14 @@ import { SocialAvatar } from "@/components/social/ReelItem";
 export default function ProfileScreen() {
   const router = useRouter();
   const logoutToWelcome = useAuthStore((state) => state.logoutToWelcome);
+  const fetchProfile = useAuthStore((state) => state.fetchProfile);
   const member = useUserProfile();
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchProfile();
+    }, [fetchProfile])
+  );
 
   const handleEditProfile = () => {
     router.push("/edit-profile");
@@ -105,7 +114,7 @@ export default function ProfileScreen() {
         <View style={[styles.banner, styles.bannerGreen]}>
           <View style={styles.bannerLeft}>
             <Text style={styles.bannerTitle}>Dues</Text>
-            <Text style={styles.bannerYear}>{member.currentYear}</Text>
+            <Text style={styles.bannerYear}>{member.currentMonth}</Text>
           </View>
           <View style={styles.statusPill}>
             <Text style={styles.statusText}>{member.duesStatus}</Text>
