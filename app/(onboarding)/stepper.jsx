@@ -27,6 +27,7 @@ import {
   MIN_PASSWORD_LENGTH,
 } from "@/lib/authValidation";
 import { generateMemberId } from "@/lib/signupPayload";
+import { branchOptionLabel, findBranchByLabel, listActiveBranches } from "@/lib/api/branches";
 import { useSignupStore } from "@/stores/useSignupStore";
 
 const GENDER_MALE = require("@/assets/images/signup/gender-male.png");
@@ -41,8 +42,6 @@ const NATIONALITIES = [
 ];
 
 const MEMBERSHIP_TYPES = ["Student", "Individual", "Family", "Corporate"];
-
-const BRANCHES = ["Madina", "Accra", "Kumasi", "Tamale", "Other"];
 
 const STEPS = [
   { key: "personal", title: "Personal Information" },
@@ -61,6 +60,8 @@ export default function OnboardingStepperScreen() {
   const toggle = useSignupStore((state) => state.toggle);
   const scrollRef = useRef(null);
   const [currentStep, setCurrentStep] = useState(0);
+  const [branches, setBranches] = useState([]);
+  const [branchesError, setBranchesError] = useState("");
 
   const contentOpacity = useRef(new Animated.Value(1)).current;
   const contentSlide = useRef(new Animated.Value(0)).current;
@@ -145,7 +146,30 @@ export default function OnboardingStepperScreen() {
     }
   }, [currentStep, form.membershipId, setField]);
 
+  useEffect(() => {
+    let active = true;
+    listActiveBranches()
+      .then((items) => {
+        if (!active) return;
+        setBranches(items);
+        setBranchesError(items.length ? "" : "No branches are available yet.");
+      })
+      .catch(() => {
+        if (!active) return;
+        setBranches([]);
+        setBranchesError("Could not load branches. Pull back to this step to retry.");
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const handleNext = () => {
+    if (STEPS[currentStep]?.key === "membership" && !form.currentBranch) {
+      Alert.alert("Branch required", "Please select the YMCA branch you belong to.");
+      return;
+    }
+
     if (currentStep < STEPS.length - 1) {
       animateToStep(currentStep + 1, "forward");
       return;
@@ -285,11 +309,21 @@ export default function OnboardingStepperScreen() {
             />
             <SignupFormCard
               label="Ymca Branch"
-              value={form.currentBranch}
-              options={BRANCHES}
-              onSelect={(value) => setField("currentBranch", value)}
+              value={
+                branchOptionLabel(branches.find((b) => b.id === form.branchId)) ||
+                form.currentBranch
+              }
+              options={branches.map(branchOptionLabel)}
+              onSelect={(value) => {
+                const branch = findBranchByLabel(branches, value);
+                setField("currentBranch", branch?.name || value);
+                setField("branchId", branch?.id || "");
+              }}
               showDropdown
             />
+            {branchesError ? (
+              <Text style={styles.memberIdHint}>{branchesError}</Text>
+            ) : null}
             <SignupFormCard
               label="Membership ID"
               value={form.membershipId}

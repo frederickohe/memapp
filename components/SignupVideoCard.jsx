@@ -2,10 +2,12 @@ import { Image, StyleSheet, View } from "react-native";
 import { SvgXml } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
 import { ICON_PLAY } from "@/components/signupIcons";
+import { YoutubeEmbed } from "@/components/YoutubeEmbed";
+import { getYoutubeVideoId } from "@/lib/youtube";
 
 const POSTER = require("@/assets/images/signup/video-poster.png");
 
-export function SignupVideoCard() {
+function VideoPosterFallback() {
   return (
     <View style={styles.card}>
       <Image source={POSTER} style={styles.image} resizeMode="cover" />
@@ -20,6 +22,12 @@ export function SignupVideoCard() {
       </View>
     </View>
   );
+}
+
+export function SignupVideoCard() {
+  const videoId = getYoutubeVideoId();
+  if (!videoId) return <VideoPosterFallback />;
+  return <YoutubeEmbed videoId={videoId} />;
 }
 
 const styles = StyleSheet.create({

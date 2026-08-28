@@ -19,6 +19,8 @@ import {
   LogOut,
   Mail,
   Smartphone,
+  Award,
+  Briefcase,
 } from "lucide-react-native";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { navigateToSignedOutApp } from "@/lib/authNavigation";
@@ -131,6 +133,30 @@ export default function ProfileScreen() {
         {/* Member Details Grid */}
         <Text style={styles.sectionTitle}>Membership Details</Text>
         <View style={styles.infoCard}>
+          {/* Membership Type */}
+          <View style={styles.infoRow}>
+            <View style={styles.infoLeft}>
+              <View style={[styles.iconContainer, { backgroundColor: "#FFF4E5" }]}>
+                <Award size={18} color="#F59E0B" />
+              </View>
+              <Text style={styles.infoLabel}>Membership</Text>
+            </View>
+            <Text style={styles.infoValue}>{member.membershipType}</Text>
+          </View>
+          <View style={styles.divider} />
+
+          {/* Position */}
+          <View style={styles.infoRow}>
+            <View style={styles.infoLeft}>
+              <View style={[styles.iconContainer, { backgroundColor: "#F3E8FF" }]}>
+                <Briefcase size={18} color="#7C3AED" />
+              </View>
+              <Text style={styles.infoLabel}>Position</Text>
+            </View>
+            <Text style={styles.infoValue}>{member.position}</Text>
+          </View>
+          <View style={styles.divider} />
+
           {/* Branch */}
           <View style={styles.infoRow}>
             <View style={styles.infoLeft}>

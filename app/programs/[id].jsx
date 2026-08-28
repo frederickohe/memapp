@@ -23,6 +23,7 @@ import {
 import { useProgram } from "@/hooks/usePrograms";
 import { useRecordSocialView } from "@/hooks/useSocial";
 import { categoryTone } from "@/components/FeedCard";
+import { YoutubeEmbed } from "@/components/YoutubeEmbed";
 
 const { width } = Dimensions.get("window");
 const HEADER_HEIGHT = 300;
@@ -175,6 +176,14 @@ export default function ProgramDetailScreen() {
 
           <View style={styles.divider} />
 
+          {program.youtubeUrl ? (
+            <YoutubeEmbed
+              url={program.youtubeUrl}
+              height={Math.round((width - 48) * 9 / 16)}
+              style={styles.video}
+            />
+          ) : null}
+
           <Text style={styles.bodyText}>
             {program.description || "More details about this program will be shared soon."}
           </Text>
@@ -316,6 +325,9 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#F0F0F0",
     marginVertical: 20,
+  },
+  video: {
+    marginBottom: 20,
   },
   bodyText: {
     fontSize: 15,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -19,6 +19,12 @@ import { ChevronLeft } from "lucide-react-native";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { uploadSocialMedia } from "@/lib/api/social";
+import {
+  branchOptionLabel,
+  findBranchById,
+  findBranchByLabel,
+  listActiveBranches,
+} from "@/lib/api/branches";
 import { SocialAvatar } from "@/components/social/ReelItem";
 
 function listToText(value) {
@@ -56,6 +62,32 @@ export default function EditProfileScreen() {
   const [avatarUri, setAvatarUri] = useState(member.avatar || null);
   const [localPhoto, setLocalPhoto] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [branches, setBranches] = useState([]);
+  const [branchId, setBranchId] = useState(member.branchId || "");
+  const [branchLabel, setBranchLabel] = useState(
+    member.branch === "—" ? "" : member.branch
+  );
+
+  useEffect(() => {
+    let active = true;
+    listActiveBranches()
+      .then((items) => {
+        if (!active) return;
+        setBranches(items);
+        const selected = findBranchById(items, member.branchId) ||
+          items.find((item) => item.name === member.branch);
+        if (selected) {
+          setBranchId(selected.id);
+          setBranchLabel(branchOptionLabel(selected));
+        }
+      })
+      .catch(() => {
+        if (active) setBranches([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [member.branch, member.branchId]);
 
   const pickPhoto = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -108,6 +140,8 @@ export default function EditProfileScreen() {
         twitter_url: twitter.trim() || null,
         linkedin_url: linkedin.trim() || null,
         profile_picture_url: profilePictureUrl || null,
+        branch_id: branchId || null,
+        current_branch: findBranchById(branches, branchId)?.name || branchLabel || null,
       });
 
       if (!result.success) {
@@ -156,6 +190,16 @@ export default function EditProfileScreen() {
           </TouchableOpacity>
 
           <Field label="Full name" value={fullname} onChangeText={setFullname} />
+          <SelectField
+            label="YMCA Branch"
+            value={branchLabel}
+            options={branches.map(branchOptionLabel)}
+            onSelect={(value) => {
+              const branch = findBranchByLabel(branches, value);
+              setBranchId(branch?.id || "");
+              setBranchLabel(branch ? branchOptionLabel(branch) : value);
+            }}
+          />
           <Field
             label="Phone"
             value={phone}
@@ -223,6 +267,44 @@ function Field({
           textAlignVertical="center"
         />
       </View>
+    </View>
+  );
+}
+
+function SelectField({ label, value, options, onSelect }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <View style={styles.field}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <TouchableOpacity
+        style={styles.fieldInputRow}
+        onPress={() => setOpen((current) => !current)}
+        activeOpacity={0.85}
+      >
+        <Text style={[styles.fieldInput, !value && styles.fieldPlaceholder]}>
+          {value || "Select branch"}
+        </Text>
+      </TouchableOpacity>
+      {open ? (
+        <View style={styles.options}>
+          {(options || []).map((option) => (
+            <TouchableOpacity
+              key={option}
+              style={styles.optionRow}
+              onPress={() => {
+                onSelect?.(option);
+                setOpen(false);
+              }}
+            >
+              <Text style={styles.optionText}>{option}</Text>
+            </TouchableOpacity>
+          ))}
+          {!options?.length ? (
+            <Text style={styles.emptyOptions}>No branches available</Text>
+          ) : null}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -302,6 +384,32 @@ const styles = StyleSheet.create({
     minHeight: 22,
     includeFontPadding: false,
     textAlignVertical: "center",
+  },
+  fieldPlaceholder: {
+    color: "#B1B2B4",
+  },
+  options: {
+    marginTop: 8,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
+    overflow: "hidden",
+  },
+  optionRow: {
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#F0F0F0",
+  },
+  optionText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#111",
+  },
+  emptyOptions: {
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    fontSize: 13,
+    color: "#999",
   },
   saveBtn: {
     marginTop: 12,

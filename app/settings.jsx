@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import Constants from "expo-constants";
+import { UserRound } from "lucide-react-native";
 import { SvgXml } from "react-native-svg";
 
 import { ICON_BACK } from "@/components/authIcons";
@@ -154,6 +155,18 @@ export default function SettingsScreen() {
               <SvgXml xml={ICON_BACK} width={7.33} height={10} />
             </View>
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Profile</Text>
+          <View style={styles.group}>
+            <SettingsRow
+              icon={<UserRound size={18} color="#000000" />}
+              label="Edit profile"
+              trailing={<SvgXml xml={ICON_CHEVRON} width={24} height={24} />}
+              onPress={() => router.push("/edit-profile")}
+            />
+          </View>
         </View>
 
         <View style={styles.section}>
