@@ -32,7 +32,7 @@ export default function ProminentProfileDetailScreen() {
     try {
       await Share.share({
         title: profile.fullName,
-        message: `${profile.fullName}\n${profile.headline}\n\n${profile.bio}\n\nRead more in the YMCA App.`,
+        message: `${profile.fullName}\n${profile.headline}\n\n${profile.bio}\n\nRead more in the YMCA Ghana App.`,
       });
     } catch (shareError) {
       console.log("Error sharing: ", shareError.message);

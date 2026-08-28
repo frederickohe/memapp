@@ -34,6 +34,23 @@ function applyView(items, itemId, viewed, views) {
   );
 }
 
+export function useRecordSocialView(itemId) {
+  const token = useAuthStore((state) => state.token);
+  const recordedRef = useRef(false);
+
+  useEffect(() => {
+    recordedRef.current = false;
+  }, [itemId]);
+
+  useEffect(() => {
+    if (!itemId || !token || recordedRef.current) return;
+    recordedRef.current = true;
+    recordSocialView(itemId, token).catch(() => {
+      recordedRef.current = false;
+    });
+  }, [itemId, token]);
+}
+
 export function useSocialFeed() {
   const token = useAuthStore((state) => state.token);
   const [items, setItems] = useState([]);

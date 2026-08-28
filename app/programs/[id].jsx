@@ -21,6 +21,7 @@ import {
   Clock,
 } from "lucide-react-native";
 import { useProgram } from "@/hooks/usePrograms";
+import { useRecordSocialView } from "@/hooks/useSocial";
 import { categoryTone } from "@/components/FeedCard";
 
 const { width } = Dimensions.get("window");
@@ -32,13 +33,14 @@ export default function ProgramDetailScreen() {
   const router = useRouter();
   const scrollY = useRef(new Animated.Value(0)).current;
   const { program, isLoading, error } = useProgram(programId);
+  useRecordSocialView(programId ? `PROGRAM:${programId}` : null);
 
   const handleShare = async () => {
     if (!program) return;
     try {
       await Share.share({
         title: program.title,
-        message: `${program.title}\n\n${program.summary}\n\nSee this program in the YMCA App.`,
+        message: `${program.title}\n\n${program.summary}\n\nSee this program in the YMCA Ghana App.`,
       });
     } catch (shareError) {
       console.log("Error sharing: ", shareError.message);

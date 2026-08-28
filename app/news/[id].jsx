@@ -14,6 +14,7 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, Share2, Heart, Bookmark, Clock, MapPin } from "lucide-react-native";
 import { useNewsArticle } from "@/hooks/useNews";
+import { useRecordSocialView } from "@/hooks/useSocial";
 
 const { width } = Dimensions.get("window");
 const HEADER_HEIGHT = 300;
@@ -24,6 +25,7 @@ export default function BlogDetailScreen() {
   const router = useRouter();
   const scrollY = useRef(new Animated.Value(0)).current;
   const { article, isLoading, error } = useNewsArticle(newsId);
+  useRecordSocialView(newsId ? `NEWS:${newsId}` : null);
 
   const handleShare = async () => {
     if (!article) return;
@@ -31,7 +33,7 @@ export default function BlogDetailScreen() {
     try {
       await Share.share({
         title: article.title,
-        message: `${article.title}\n\n${article.summary}\n\nRead more in the YMCA App!`,
+        message: `${article.title}\n\n${article.summary}\n\nRead more in the YMCA Ghana App!`,
       });
     } catch (shareError) {
       console.log("Error sharing: ", shareError.message);
