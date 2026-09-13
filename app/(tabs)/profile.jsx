@@ -157,6 +157,20 @@ export default function ProfileScreen() {
           </View>
           <View style={styles.divider} />
 
+          {/* Past Positions */}
+          <View style={styles.infoRow}>
+            <View style={styles.infoLeft}>
+              <View style={[styles.iconContainer, { backgroundColor: "#EEF2FF" }]}>
+                <Briefcase size={18} color="#4338CA" />
+              </View>
+              <Text style={styles.infoLabel}>Past Positions</Text>
+            </View>
+            <Text style={styles.infoValue}>
+              {member.pastPositions.length ? member.pastPositions.join(", ") : "—"}
+            </Text>
+          </View>
+          <View style={styles.divider} />
+
           {/* Branch */}
           <View style={styles.infoRow}>
             <View style={styles.infoLeft}>
@@ -406,6 +420,7 @@ const styles = StyleSheet.create({
   infoLeft: {
     flexDirection: "row",
     alignItems: "center",
+    flexShrink: 0,
   },
   iconContainer: {
     width: 32,
@@ -421,9 +436,12 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   infoValue: {
+    flex: 1,
     fontSize: 13,
     color: "#111",
     fontWeight: "500",
+    textAlign: "right",
+    marginLeft: 12,
   },
   divider: {
     height: 1,

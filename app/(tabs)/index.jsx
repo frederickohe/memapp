@@ -27,6 +27,7 @@ import ProfileAvatar from "@/components/ProfileAvatar";
 import { formatNewsUpdatesLabel } from "@/lib/newsUtils";
 import { shortProfileName } from "@/lib/profileUtils";
 import { formatCount } from "@/lib/volunteerUtils";
+import { YMCA_IMAGES } from "@/lib/ymcaImages";
 
 const DARK = "#1D3108";
 const SUBTLE = "#4B5563";
@@ -37,8 +38,7 @@ const FALLBACK_STORIES = [
     id: "fallback-story-1",
     title: "Youth Leadership Camp",
     summary: "Members spent the week building skills and serving their community.",
-    image:
-      "https://images.unsplash.com/photo-1610441572339-bdf395d1c410?auto=format&fit=crop&w=600&q=80",
+    image: YMCA_IMAGES.youthConference,
     isFallback: true,
     fallbackRoute: "/impact",
   },
@@ -46,8 +46,7 @@ const FALLBACK_STORIES = [
     id: "fallback-story-2",
     title: "Branch Outreach Day",
     summary: "Volunteers hosted games, health checks, and family activities.",
-    image:
-      "https://images.unsplash.com/photo-1660675134044-6f1990caba94?auto=format&fit=crop&w=600&q=80",
+    image: YMCA_IMAGES.outreach,
     isFallback: true,
     fallbackRoute: "/impact",
   },
@@ -58,8 +57,7 @@ const FALLBACK_NEWS = [
     id: "fallback-news-1",
     title: "New Programs This Month",
     summary: "See the latest classes, camps, and member activities at your branch.",
-    image:
-      "https://images.unsplash.com/photo-1630386226447-af0a955c1009?auto=format&fit=crop&w=600&q=80",
+    image: YMCA_IMAGES.digitalFilm,
     isFallback: true,
     fallbackRoute: "/news",
   },
@@ -67,8 +65,7 @@ const FALLBACK_NEWS = [
     id: "fallback-news-2",
     title: "Membership Updates",
     summary: "Stay current on branch news, events, and important notices.",
-    image:
-      "https://images.unsplash.com/photo-1680801237121-13222ddd73ba?auto=format&fit=crop&w=600&q=80",
+    image: YMCA_IMAGES.councilMeeting,
     isFallback: true,
     fallbackRoute: "/news",
   },
@@ -159,16 +156,14 @@ export default function HomeScreen() {
         id: "news",
         title: "News & Updates",
         subtitle: formatNewsUpdatesLabel(newsCount),
-        image:
-          "https://images.unsplash.com/photo-1669418989936-fae7f3cebd56?auto=format&fit=crop&w=1200&q=80",
+        image: YMCA_IMAGES.britishCouncil,
         route: "/news",
       },
       {
         id: "connect",
         title: "Y Social",
         subtitle: "Posts & impact",
-        image:
-          "https://images.unsplash.com/photo-1648301033733-44554c74ec50?auto=format&fit=crop&w=1200&q=80",
+        image: YMCA_IMAGES.youthHandshake,
         route: "/social",
       },
       {
@@ -180,8 +175,7 @@ export default function HomeScreen() {
             : programsCount === 1
               ? "1 Program"
               : `${programsCount} Programs`,
-        image:
-          "https://images.unsplash.com/photo-1610441572339-bdf395d1c410?auto=format&fit=crop&w=1200&q=80",
+        image: YMCA_IMAGES.youthConference,
         route: "/programs",
       },
       {
@@ -193,8 +187,7 @@ export default function HomeScreen() {
             : surveysCount === 1
               ? "1 Survey"
               : `${surveysCount} Surveys`,
-        image:
-          "https://images.unsplash.com/photo-1632215861513-130b66fe97f4?auto=format&fit=crop&w=1200&q=80",
+        image: YMCA_IMAGES.youthSession,
         route: "/surveys",
       },
     ],

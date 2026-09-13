@@ -2,30 +2,28 @@ import { createElement, useMemo } from "react";
 import {
   Image,
   Linking,
-  NativeModules,
   Platform,
   StyleSheet,
   TouchableOpacity,
   View,
 } from "react-native";
+import Constants from "expo-constants";
 import { SvgXml } from "react-native-svg";
 import { ICON_PLAY } from "@/components/signupIcons";
 import { getYoutubeVideoId } from "@/lib/youtube";
 
-function hasNativeWebView() {
-  if (Platform.OS === "web") return false;
-  try {
-    if (NativeModules.RNCWebViewModule || NativeModules.RNCWebView) return true;
-    const { TurboModuleRegistry } = require("react-native");
-    return Boolean(TurboModuleRegistry?.get?.("RNCWebViewModule"));
-  } catch {
-    return false;
-  }
+function isExpoGo() {
+  return (
+    Constants.appOwnership === "expo" ||
+    Constants.executionEnvironment === "storeClient"
+  );
 }
 
 function loadWebView() {
-  if (!hasNativeWebView()) return null;
+  if (Platform.OS === "web" || isExpoGo()) return null;
   try {
+    const { TurboModuleRegistry } = require("react-native");
+    if (!TurboModuleRegistry.get("RNCWebViewModule")) return null;
     return require("react-native-webview").WebView;
   } catch {
     return null;

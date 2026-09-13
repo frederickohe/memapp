@@ -94,7 +94,7 @@ export default function LogOrSignScreen() {
         <Image source={LOGO} style={styles.logo} resizeMode="contain" />
 
         <Text style={styles.welcomeText}>
-          {"Welcome to the \nYmca Member App"}
+          {"Welcome to the \nYMCA Member App"}
         </Text>
 
         <View style={styles.actions}>

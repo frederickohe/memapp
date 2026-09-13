@@ -239,6 +239,8 @@ export const useAuthStore = create(
             membership_type: payload.membership_type,
             current_branch: payload.current_branch,
             member_id: payload.member_id,
+            date_joined_organization: payload.date_joined_organization,
+            past_positions: payload.past_positions,
             skills: payload.skills,
             created_at: payload.created_at,
             profile_picture_url: payload.profile_picture_url,

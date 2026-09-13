@@ -32,6 +32,7 @@ import {
   loadAppSettings,
   saveAppSettings,
 } from "@/lib/appSettings";
+import { LEGAL_URLS } from "@/lib/legalUrls";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 const LANGUAGE_ICON = require("@/assets/images/settings/icon-language.png");
@@ -136,6 +137,19 @@ export default function SettingsScreen() {
     const version =
       Constants.expoConfig?.version || Constants.nativeAppVersion || "1.0.0";
     Alert.alert("About", `YMCA Ghana App\nVersion ${version}`);
+  };
+
+  const openLegalPage = async (url) => {
+    try {
+      const canOpen = await Linking.canOpenURL(url);
+      if (!canOpen) {
+        Alert.alert("Unable to open link", url);
+        return;
+      }
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert("Unable to open link", url);
+    }
   };
 
   return (
@@ -246,6 +260,30 @@ export default function SettingsScreen() {
               label="About"
               trailing={<SvgXml xml={ICON_CHEVRON_SM} width={20} height={20} />}
               onPress={handleAbout}
+            />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Legal</Text>
+          <View style={styles.group}>
+            <SettingsRow
+              icon={<SvgXml xml={ICON_INFO} width={20} height={20} />}
+              label="Privacy policy"
+              trailing={<SvgXml xml={ICON_CHEVRON} width={24} height={24} />}
+              onPress={() => void openLegalPage(LEGAL_URLS.privacy)}
+            />
+            <SettingsRow
+              icon={<SvgXml xml={ICON_INFO} width={20} height={20} />}
+              label="Terms of use"
+              trailing={<SvgXml xml={ICON_CHEVRON} width={24} height={24} />}
+              onPress={() => void openLegalPage(LEGAL_URLS.terms)}
+            />
+            <SettingsRow
+              icon={<SvgXml xml={ICON_INFO} width={20} height={20} />}
+              label="Delete account"
+              trailing={<SvgXml xml={ICON_CHEVRON} width={24} height={24} />}
+              onPress={() => void openLegalPage(LEGAL_URLS.accountDeletion)}
             />
           </View>
         </View>

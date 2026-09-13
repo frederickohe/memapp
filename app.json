@@ -11,6 +11,9 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "org.ymcaghana.memberapp",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Allow YMCA to access your photos so you can share on Y Social."
       }
@@ -49,7 +52,8 @@
           "photosPermission": "Allow YMCA to access your photos so you can share on Y Social."
         }
       ],
-      "./plugins/withIosPodFixes"
+      "./plugins/withIosPodFixes",
+      "./plugins/withNilSafeFabricComponents"
     ],
     "experiments": {
       "typedRoutes": true,

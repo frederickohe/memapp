@@ -60,11 +60,6 @@ function toIsoDate(date) {
   return `${date.getFullYear()}-${mm}-${dd}`;
 }
 
-function defaultDob() {
-  const date = new Date();
-  date.setFullYear(date.getFullYear() - 18);
-  return date;
-}
 
 function RadioMark({ filled, onDark }) {
   if (!filled) {
@@ -101,6 +96,12 @@ function WebDateInput({ value, min, max, onChange }) {
   });
 }
 
+function defaultCalendarDate(yearsAgo = 18) {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() - yearsAgo);
+  return date;
+}
+
 export function SignupFormCard({
   label,
   value,
@@ -117,10 +118,14 @@ export function SignupFormCard({
   selected,
   portrait,
   onPress,
+  pickerTitle = "Date of Birth",
+  defaultYearsAgo = 18,
 }) {
   const [open, setOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [draftDate, setDraftDate] = useState(() => parseDob(value) ?? defaultDob());
+  const [draftDate, setDraftDate] = useState(
+    () => parseDob(value) ?? defaultCalendarDate(defaultYearsAgo)
+  );
   const isFilled = filled ?? Boolean(value);
   const isDark = Boolean(selected);
   const isTappable = Boolean(onPress || options?.length || showCalendar);
@@ -134,7 +139,7 @@ export function SignupFormCard({
   );
 
   const openPicker = () => {
-    setDraftDate(parseDob(value) ?? defaultDob());
+    setDraftDate(parseDob(value) ?? defaultCalendarDate(defaultYearsAgo));
     setPickerOpen(true);
   };
 
@@ -185,7 +190,7 @@ export function SignupFormCard({
     >
       <Text
         style={[styles.label, isDark && styles.labelOnDark]}
-        numberOfLines={1}
+        numberOfLines={2}
       >
         {label}
       </Text>
@@ -304,7 +309,7 @@ export function SignupFormCard({
       >
         <Pressable style={styles.pickerOverlay} onPress={closePicker}>
           <Pressable style={styles.pickerSheet} onPress={() => {}}>
-            <Text style={styles.pickerTitle}>Date of Birth</Text>
+            <Text style={styles.pickerTitle}>{pickerTitle}</Text>
             {Platform.OS === "web" ? (
               <WebDateInput
                 value={toIsoDate(draftDate)}
@@ -363,7 +368,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   label: {
-    width: 118,
+    width: 128,
     fontSize: 14,
     fontWeight: "500",
     lineHeight: 20,

@@ -18,8 +18,9 @@ import { ArrowLeft, Play } from "lucide-react-native";
 import { OnboardingButton } from "@/components/OnboardingFormComponents";
 import { setVolunteerApplyDraft } from "@/lib/volunteerUtils";
 
-const VIDEO_PREVIEW =
-  "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50e?auto=format&fit=crop&w=800&q=80";
+import { VOLUNTEER_PLACEHOLDER } from "@/lib/ymcaImages";
+
+const VIDEO_PREVIEW = VOLUNTEER_PLACEHOLDER;
 
 const STEPS = ["Upload", "Details"];
 
