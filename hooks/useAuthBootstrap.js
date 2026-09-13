@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
 import { useCallback, useEffect } from "react";
 import { BackHandler } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router/react-navigation";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { isAuthenticated } from "@/lib/authRouting";
 import { navigateToAuthenticatedApp } from "@/lib/authNavigation";

@@ -25,7 +25,7 @@ SplashScreen.preventAutoHideAsync();
 
 const { width, height } = Dimensions.get("window");
 
-const SPLASH_SOURCE = require("@/assets/images/splash-screen.png");
+const SPLASH_SOURCE = require("@/assets/images/splash-screen.jpg");
 const splashMeta =
   typeof Image.resolveAssetSource === "function"
     ? Image.resolveAssetSource(SPLASH_SOURCE)
@@ -146,7 +146,7 @@ export default function RootLayout() {
           <Stack.Screen name="(auth)" />
         </Stack.Protected>
       </Stack>
-      <StatusBar style="auto" />
+      <StatusBar style="dark" />
 
       {splashVisible && (
         <Animated.View style={[styles.splashContainer, { opacity: fadeAnim }]}>

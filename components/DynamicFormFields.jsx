@@ -79,6 +79,8 @@ function DateField({ field, value, onChange }) {
           value={current}
           mode="date"
           display={Platform.OS === "ios" ? "spinner" : "default"}
+          themeVariant="light"
+          style={Platform.OS === "ios" ? styles.iosPicker : undefined}
           onChange={(event, nextDate) => {
             if (Platform.OS === "android") setOpen(false);
             if (event.type === "dismissed") {
@@ -247,6 +249,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#e8e8e8",
     marginTop: 2,
     marginBottom: 4,
+  },
+  iosPicker: {
+    height: 180,
   },
   doneBtn: {
     alignSelf: "flex-end",

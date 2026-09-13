@@ -1,4 +1,4 @@
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from 'expo-router/react-navigation';
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -40,6 +40,16 @@ const NATIONALITIES = [
   "British",
   "Other",
 ];
+
+// Display-only glyphs. The stored nationality stays the plain demonym
+// because it is sent as-is in the signup payload.
+const NATIONALITY_FLAGS = {
+  Ghanaian: "🇬🇭",
+  Nigerian: "🇳🇬",
+  American: "🇺🇸",
+  British: "🇬🇧",
+  Other: "🌍",
+};
 
 const MEMBERSHIP_TYPES = ["Student", "Individual", "Family", "Corporate"];
 
@@ -222,6 +232,7 @@ export default function OnboardingStepperScreen() {
               label="Nationality"
               value={form.nationality}
               options={NATIONALITIES}
+              optionIcons={NATIONALITY_FLAGS}
               onSelect={(value) => setField("nationality", value)}
               showDropdown
             />
@@ -420,7 +431,7 @@ export default function OnboardingStepperScreen() {
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <View style={styles.topBar}>
+        <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={handleBack}
@@ -430,6 +441,12 @@ export default function OnboardingStepperScreen() {
               <SvgXml xml={ICON_BACK} width={7.33} height={10} />
             </View>
           </TouchableOpacity>
+          <Animated.Text
+            style={[styles.stepTitle, { opacity: titleOpacity }]}
+            numberOfLines={1}
+          >
+            {STEPS[currentStep].title}
+          </Animated.Text>
         </View>
         <ScrollView
           ref={scrollRef}
@@ -437,10 +454,6 @@ export default function OnboardingStepperScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Animated.Text style={[styles.stepTitle, { opacity: titleOpacity }]}>
-            {STEPS[currentStep].title}
-          </Animated.Text>
-
           <SignupVideoCard />
 
           <Animated.View
@@ -472,12 +485,13 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
-  topBar: {
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 24,
     paddingTop: 8,
     paddingBottom: 8,
-    minHeight: 56,
-    justifyContent: "center",
+    gap: 16,
   },
   backButton: {
     width: 40,
@@ -497,16 +511,17 @@ const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 8,
+    paddingTop: 48,
     paddingBottom: 24,
     gap: 56,
   },
   stepTitle: {
-    fontSize: 24,
+    flex: 1,
+    fontSize: 20,
     fontWeight: "800",
     color: "#000000",
-    textAlign: "center",
     textTransform: "capitalize",
+    paddingLeft: 6
   },
   formContainer: {
     gap: 8,
