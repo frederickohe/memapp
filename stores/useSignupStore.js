@@ -17,6 +17,8 @@ const INITIAL_FORM = {
   membershipType: "",
   currentBranch: "",
   branchId: "",
+  dateJoinedYmca: "",
+  pastPositions: "",
   numberOfBonds: "",
   membershipId: "",
   skills: "",

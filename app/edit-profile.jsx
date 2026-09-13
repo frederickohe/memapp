@@ -27,6 +27,14 @@ import {
 } from "@/lib/api/branches";
 import { SocialAvatar } from "@/components/social/ReelItem";
 
+function toIsoDate(value) {
+  if (!value) return null;
+  const slash = String(value).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (slash) return `${slash[3]}-${slash[2]}-${slash[1]}`;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  return String(value).trim() || null;
+}
+
 function listToText(value) {
   if (!value) return "";
   if (Array.isArray(value)) return value.join(", ");
@@ -52,6 +60,10 @@ export default function EditProfileScreen() {
   const [occupation, setOccupation] = useState(
     member.occupation === "—" ? "" : member.occupation
   );
+  const [dateJoinedYmca, setDateJoinedYmca] = useState(
+    member.dateJoinedOrganization || ""
+  );
+  const [pastPositions, setPastPositions] = useState(listToText(member.pastPositions));
   const [address, setAddress] = useState(member.address === "—" ? "" : member.address);
   const [skills, setSkills] = useState(listToText(member.skills));
   const [whatsapp, setWhatsapp] = useState(member.whatsapp === "—" ? "" : member.whatsapp);
@@ -133,6 +145,8 @@ export default function EditProfileScreen() {
         phone_number: phone.trim() || null,
         occupation: occupation.trim() || null,
         address: address.trim() || null,
+        date_joined_organization: toIsoDate(dateJoinedYmca),
+        past_positions: textToList(pastPositions),
         skills: textToList(skills),
         whatsapp_number: whatsapp.trim() ? whatsapp.trim().slice(0, 20) : null,
         instagram_url: instagram.trim() || null,
@@ -207,6 +221,18 @@ export default function EditProfileScreen() {
             keyboardType="phone-pad"
           />
           <Field label="Occupation" value={occupation} onChangeText={setOccupation} />
+          <Field
+            label="Date Joined YMCA"
+            value={dateJoinedYmca}
+            onChangeText={setDateJoinedYmca}
+            placeholder="YYYY-MM-DD"
+          />
+          <Field
+            label="Past Positions"
+            value={pastPositions}
+            onChangeText={setPastPositions}
+            placeholder="Secretary, Treasurer"
+          />
           <Field label="Address" value={address} onChangeText={setAddress} />
           <Field
             label="Skills"

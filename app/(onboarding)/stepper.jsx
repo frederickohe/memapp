@@ -7,6 +7,7 @@ import {
   BackHandler,
   Easing,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
   StatusBar,
@@ -28,6 +29,7 @@ import {
 } from "@/lib/authValidation";
 import { generateMemberId } from "@/lib/signupPayload";
 import { branchOptionLabel, findBranchByLabel, listActiveBranches } from "@/lib/api/branches";
+import { LEGAL_URLS } from "@/lib/legalUrls";
 import { useSignupStore } from "@/stores/useSignupStore";
 
 const GENDER_MALE = require("@/assets/images/signup/gender-male.png");
@@ -319,7 +321,7 @@ export default function OnboardingStepperScreen() {
               showDropdown
             />
             <SignupFormCard
-              label="Ymca Branch"
+              label="YMCA Branch"
               value={
                 branchOptionLabel(branches.find((b) => b.id === form.branchId)) ||
                 form.currentBranch
@@ -335,6 +337,25 @@ export default function OnboardingStepperScreen() {
             {branchesError ? (
               <Text style={styles.memberIdHint}>{branchesError}</Text>
             ) : null}
+            <SignupFormCard
+              label="Date Joined YMCA"
+              value={form.dateJoinedYmca}
+              onChangeText={(value) => setField("dateJoinedYmca", value)}
+              placeholder="DD/MM/YYYY"
+              showCalendar
+              pickerTitle="Date Joined YMCA"
+              defaultYearsAgo={0}
+            />
+            <SignupFormCard
+              label="Past Positions"
+              value={form.pastPositions}
+              onChangeText={(value) => setField("pastPositions", value)}
+              placeholder="Secretary, Treasurer"
+              autoCapitalize="words"
+            />
+            <Text style={styles.memberIdHint}>
+              Separate multiple positions with commas.
+            </Text>
             <SignupFormCard
               label="Membership ID"
               value={form.membershipId}
@@ -372,17 +393,23 @@ export default function OnboardingStepperScreen() {
           <>
             <SignupFormCard
               label="Terms & Agreements"
-              value="Click to read"
+              value="Tap to read"
               selected={form.termsAccepted}
               filled={form.termsAccepted}
-              onPress={() => toggle("termsAccepted")}
+              onPress={() => {
+                void Linking.openURL(LEGAL_URLS.terms);
+                if (!form.termsAccepted) toggle("termsAccepted");
+              }}
             />
             <SignupFormCard
               label="Data Privacy Policy"
-              value="Click to read"
+              value="Tap to read"
               selected={form.privacyAccepted}
               filled={form.privacyAccepted}
-              onPress={() => toggle("privacyAccepted")}
+              onPress={() => {
+                void Linking.openURL(LEGAL_URLS.privacy);
+                if (!form.privacyAccepted) toggle("privacyAccepted");
+              }}
             />
             <SignupFormCard
               label="Photo Display"
