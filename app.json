@@ -52,12 +52,25 @@
           "photosPermission": "Allow YMCA to access your photos so you can share on Y Social."
         }
       ],
+      [
+        "expo-status-bar",
+        {
+          "style": "dark"
+        }
+      ],
       "./plugins/withIosPodFixes",
-      "./plugins/withNilSafeFabricComponents"
+      "./plugins/withNilSafeFabricComponents",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "ad1971ae-d798-4857-880c-294698e3fe9b"
+      }
     }
   }
 }

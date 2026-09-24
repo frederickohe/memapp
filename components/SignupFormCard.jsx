@@ -111,6 +111,7 @@ export function SignupFormCard({
   showCalendar,
   showDropdown,
   options,
+  optionIcons,
   onSelect,
   secureTextEntry,
   keyboardType = "default",
@@ -213,12 +214,17 @@ export function SignupFormCard({
       ) : options?.length ? (
         <View style={styles.valueRow}>
           {value ? (
-            <Text
-              style={[styles.valueText, isDark && styles.valueOnDark]}
-              numberOfLines={1}
-            >
-              {value}
-            </Text>
+            <>
+              {optionIcons?.[value] ? (
+                <Text style={styles.optionIcon}>{optionIcons[value]}</Text>
+              ) : null}
+              <Text
+                style={[styles.valueText, isDark && styles.valueOnDark]}
+                numberOfLines={1}
+              >
+                {value}
+              </Text>
+            </>
           ) : (
             <View style={styles.dropdownIcon}>
               <SvgXml xml={ICON_DROPDOWN} width={18} height={18} />
@@ -284,6 +290,9 @@ export function SignupFormCard({
                 setOpen(false);
               }}
             >
+              {optionIcons?.[option] ? (
+                <Text style={styles.optionIcon}>{optionIcons[option]}</Text>
+              ) : null}
               <Text style={styles.optionText}>{option}</Text>
             </TouchableOpacity>
           ))}
@@ -459,16 +468,26 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   optionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "#EEE",
   },
   optionText: {
+    flex: 1,
     fontSize: 14,
     fontWeight: "500",
     lineHeight: 20,
     color: "#000",
+    minWidth: 0,
+  },
+  optionIcon: {
+    fontSize: 20,
+    lineHeight: 24,
+    flexShrink: 0,
   },
   pickerOverlay: {
     flex: 1,

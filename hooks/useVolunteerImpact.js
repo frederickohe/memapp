@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router/react-navigation";
 import { getVolunteerImpact } from "@/lib/api/vhs";
 import { buildVolunteerImpact } from "@/lib/volunteerUtils";
 import { useAuthStore } from "@/stores/useAuthStore";

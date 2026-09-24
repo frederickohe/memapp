@@ -141,8 +141,6 @@ export default function ApplyVolunteerHoursFormScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.stepTitle}>Apply Hours</Text>
-
           <View style={styles.mediaPadding}>
             <TouchableOpacity
               style={styles.receiptCard}
