@@ -4,6 +4,8 @@ import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
+import * as Linking from "expo-linking";
+import { useRouter } from "expo-router";
 import {
   Animated,
   Dimensions,
@@ -19,6 +21,12 @@ import "react-native-reanimated";
 import { LATO_FONTS, applyGlobalLatoFont } from "@/components/latoFont";
 import { useAuthAccess } from "@/hooks/useAuthAccess";
 import { SplashVisibleContext } from "@/hooks/useSplashVisible";
+import { LanguageProvider, useI18n } from "@/lib/i18n";
+import {
+  consumePendingSurvey,
+  rememberPendingSurvey,
+  surveyIdFromUrl,
+} from "@/lib/pendingSurvey";
 
 applyGlobalLatoFont();
 SplashScreen.preventAutoHideAsync();
@@ -43,12 +51,49 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
+  return (
+    <LanguageProvider>
+      <RootLayoutContent />
+    </LanguageProvider>
+  );
+}
+
+function RootLayoutContent() {
+  const { t } = useI18n();
   const [fontsLoaded] = useFonts(LATO_FONTS);
   const [splashVisible, setSplashVisible] = useState(true);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const panAnim = useRef(new Animated.Value(0)).current;
+  const router = useRouter();
   const { hydrated, canAccessApp, canAccessPinLock, canAccessOnboarding, canAccessAuth } =
     useAuthAccess();
+
+  const canAccessAppRef = useRef(canAccessApp);
+  canAccessAppRef.current = canAccessApp;
+
+  useEffect(() => {
+    let active = true;
+
+    const openOrRemember = (url, fromEvent) => {
+      const formId = surveyIdFromUrl(url);
+      if (!formId) return;
+      void rememberPendingSurvey(formId);
+      if (fromEvent && canAccessAppRef.current) {
+        void consumePendingSurvey();
+        router.replace(`/surveys/${formId}`);
+      }
+    };
+
+    Linking.getInitialURL().then((url) => {
+      if (active) openOrRemember(url, false);
+    });
+    const subscription = Linking.addEventListener("url", ({ url }) => openOrRemember(url, true));
+
+    return () => {
+      active = false;
+      subscription.remove();
+    };
+  }, [router]);
 
   useEffect(() => {
     if (!fontsLoaded) return;
@@ -170,7 +215,7 @@ export default function RootLayout() {
             style={styles.splashOverlay}
           />
           <View style={styles.splashTextWrapper}>
-            <Text style={styles.splashWelcome}>Welcome to</Text>
+            <Text style={styles.splashWelcome}>{t("splash.welcome")}</Text>
             <Text style={styles.splashTitle}>YMCA Ghana</Text>
           </View>
         </Animated.View>

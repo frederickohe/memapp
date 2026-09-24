@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect } from "react";
 import ProfileLoadingScreen from "@/components/ProfileLoadingScreen";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { consumePendingSurvey } from "@/lib/pendingSurvey";
 
 const MIN_LOADING_MS = 1800;
 
@@ -21,7 +22,8 @@ export default function LoadingProfileScreen() {
       await Promise.all([fetchProfile(), minDelay]);
 
       if (!cancelled) {
-        router.replace(destination);
+        const pendingFormId = await consumePendingSurvey();
+        router.replace(pendingFormId ? `/surveys/${pendingFormId}` : destination);
       }
     };
 
