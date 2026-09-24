@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import {
   Alert,
   Image,
@@ -11,10 +11,9 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useFocusEffect } from "expo-router/react-navigation";
 import { useRouter } from "expo-router";
 import Constants from "expo-constants";
-import { UserRound } from "lucide-react-native";
+import { Trash2, UserRound } from "lucide-react-native";
 import { SvgXml } from "react-native-svg";
 
 import { ICON_BACK } from "@/components/authIcons";
@@ -27,16 +26,14 @@ import {
   ICON_NOTIFICATION,
   ICON_PHONE,
 } from "@/components/settingsIcons";
-import {
-  DEFAULT_SETTINGS,
-  loadAppSettings,
-  saveAppSettings,
-} from "@/lib/appSettings";
+import { navigateToSignedOutApp } from "@/lib/authNavigation";
+import { useI18n } from "@/lib/i18n";
 import { LEGAL_URLS } from "@/lib/legalUrls";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 const LANGUAGE_ICON = require("@/assets/images/settings/icon-language.png");
-const SUPPORT_NUMBER = "1186";
+const SUPPORT_NUMBER_DISPLAY = "+233 (0) 302 224700";
+const SUPPORT_NUMBER_DIAL = "+233302224700";
 
 function PinIcon() {
   return (
@@ -68,12 +65,12 @@ function SettingsSwitch({ value, onValueChange }) {
   );
 }
 
-function SettingsRow({ icon, label, value, trailing, onPress }) {
+function SettingsRow({ icon, label, value, trailing, onPress, danger, disabled }) {
   const body = (
     <View style={styles.row}>
       <View style={styles.rowIcon}>{icon}</View>
       <View style={styles.rowText}>
-        <Text style={styles.rowLabel}>{label}</Text>
+        <Text style={[styles.rowLabel, danger && styles.rowLabelDanger]}>{label}</Text>
         {value ? <Text style={styles.rowValue}>{value}</Text> : null}
       </View>
       {trailing}
@@ -83,7 +80,7 @@ function SettingsRow({ icon, label, value, trailing, onPress }) {
   if (!onPress) return body;
 
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.85} disabled={disabled}>
       {body}
     </TouchableOpacity>
   );
@@ -91,64 +88,100 @@ function SettingsRow({ icon, label, value, trailing, onPress }) {
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const [prefs, setPrefs] = useState(DEFAULT_SETTINGS);
+  const { t, language } = useI18n();
   const devicePinEnabled = useAuthStore((state) => state.devicePinEnabled);
   const disableLocalPin = useAuthStore((state) => state.disableLocalPin);
-
-  useFocusEffect(
-    useCallback(() => {
-      let active = true;
-      loadAppSettings().then((next) => {
-        if (active) setPrefs(next);
-      });
-      return () => {
-        active = false;
-      };
-    }, [])
-  );
-
-  const updatePref = (key, value) => {
-    setPrefs((current) => {
-      const next = { ...current, [key]: value };
-      saveAppSettings(next).catch(() => {});
-      return next;
-    });
-  };
+  const deleteAccount = useAuthStore((state) => state.deleteAccount);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   const handleChatSupport = () => {
-    Alert.alert("Chat support", "Chat support will be available soon.");
+    Alert.alert(t("settings.chatTitle"), t("settings.chatSoon"));
+  };
+
+  const handleComingSoon = (titleKey, bodyKey) => {
+    Alert.alert(t(titleKey), t(bodyKey));
   };
 
   const handleCallSupport = async () => {
-    const url = `tel:${SUPPORT_NUMBER}`;
+    const url = `tel:${SUPPORT_NUMBER_DIAL}`;
     try {
       const canOpen = await Linking.canOpenURL(url);
       if (!canOpen) {
-        Alert.alert("Unable to call", `Call ${SUPPORT_NUMBER} for support.`);
+        Alert.alert(
+          t("settings.unableToCall"),
+          t("settings.callFallback", { number: SUPPORT_NUMBER_DISPLAY })
+        );
         return;
       }
       await Linking.openURL(url);
     } catch {
-      Alert.alert("Unable to call", `Call ${SUPPORT_NUMBER} for support.`);
+      Alert.alert(
+        t("settings.unableToCall"),
+        t("settings.callFallback", { number: SUPPORT_NUMBER_DISPLAY })
+      );
     }
   };
 
   const handleAbout = () => {
     const version =
       Constants.expoConfig?.version || Constants.nativeAppVersion || "1.0.0";
-    Alert.alert("About", `YMCA Ghana App\nVersion ${version}`);
+    Alert.alert(
+      t("settings.aboutTitle"),
+      t("settings.aboutBody", { version })
+    );
+  };
+
+  const confirmDeleteAccount = () => {
+    Alert.alert(t("settings.deleteConfirmTitle"), t("settings.deleteConfirmBody"), [
+      { text: t("settings.deleteCancel"), style: "cancel" },
+      {
+        text: t("settings.deleteConfirm"),
+        style: "destructive",
+        onPress: () => {
+          void performDeleteAccount();
+        },
+      },
+    ]);
+  };
+
+  const handleDeleteAccount = () => {
+    if (deletingAccount) return;
+    Alert.alert(t("settings.deleteTitle"), t("settings.deleteBody"), [
+      { text: t("settings.deleteCancel"), style: "cancel" },
+      {
+        text: t("settings.deleteContinue"),
+        style: "destructive",
+        onPress: () => {
+          setTimeout(confirmDeleteAccount, 350);
+        },
+      },
+    ]);
+  };
+
+  const performDeleteAccount = async () => {
+    setDeletingAccount(true);
+    const result = await deleteAccount();
+    setDeletingAccount(false);
+    if (!result.success) {
+      Alert.alert(
+        t("settings.deleteFailed"),
+        result.error?.message || t("settings.deleteFailed")
+      );
+      return;
+    }
+    navigateToSignedOutApp(router);
   };
 
   const openLegalPage = async (url) => {
     try {
       const canOpen = await Linking.canOpenURL(url);
       if (!canOpen) {
-        Alert.alert("Unable to open link", url);
+        Alert.alert(t("settings.unableLink"), url);
         return;
       }
       await Linking.openURL(url);
     } catch {
-      Alert.alert("Unable to open link", url);
+      Alert.alert(t("settings.unableLink"), url);
     }
   };
 
@@ -172,11 +205,11 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Profile</Text>
+          <Text style={styles.sectionTitle}>{t("settings.profile")}</Text>
           <View style={styles.group}>
             <SettingsRow
               icon={<UserRound size={18} color="#000000" />}
-              label="Edit profile"
+              label={t("settings.editProfile")}
               trailing={<SvgXml xml={ICON_CHEVRON} width={24} height={24} />}
               onPress={() => router.push("/edit-profile")}
             />
@@ -184,7 +217,7 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Settings</Text>
+          <Text style={styles.sectionTitle}>{t("settings.section")}</Text>
           <View style={styles.group}>
             <SettingsRow
               icon={
@@ -194,14 +227,14 @@ export default function SettingsScreen() {
                   resizeMode="contain"
                 />
               }
-              label="App language"
-              value={`(${prefs.language})`}
+              label={t("settings.language")}
+              value={`(${language})`}
               trailing={<SvgXml xml={ICON_CHEVRON} width={24} height={24} />}
               onPress={() => router.push("/select-language")}
             />
             <SettingsRow
               icon={<PinIcon />}
-              label="PIN"
+              label={t("settings.pin")}
               trailing={
                 <SettingsSwitch
                   value={devicePinEnabled}
@@ -217,47 +250,44 @@ export default function SettingsScreen() {
             />
             <SettingsRow
               icon={<SvgXml xml={ICON_FINGERPRINT} width={20} height={20} />}
-              label="Touch ID"
-              trailing={
-                <SettingsSwitch
-                  value={prefs.touchIdEnabled}
-                  onValueChange={(value) => updatePref("touchIdEnabled", value)}
-                />
+              label={t("settings.touchId")}
+              trailing={<SvgXml xml={ICON_CHEVRON} width={24} height={24} />}
+              onPress={() =>
+                handleComingSoon("settings.touchSoonTitle", "settings.touchSoon")
               }
             />
             <SettingsRow
               icon={<SvgXml xml={ICON_NOTIFICATION} width={20} height={20} />}
-              label="Notifications"
-              trailing={
-                <SettingsSwitch
-                  value={prefs.notificationsEnabled}
-                  onValueChange={(value) =>
-                    updatePref("notificationsEnabled", value)
-                  }
-                />
+              label={t("settings.notifications")}
+              trailing={<SvgXml xml={ICON_CHEVRON} width={24} height={24} />}
+              onPress={() =>
+                handleComingSoon(
+                  "settings.notifySoonTitle",
+                  "settings.notifySoon"
+                )
               }
             />
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Support</Text>
+          <Text style={styles.sectionTitle}>{t("settings.support")}</Text>
           <View style={styles.group}>
             <SettingsRow
               icon={<SvgXml xml={ICON_CHAT} width={20} height={20} />}
-              label="Chat support"
+              label={t("settings.chat")}
               trailing={<SvgXml xml={ICON_CHEVRON_SM} width={20} height={20} />}
               onPress={handleChatSupport}
             />
             <SettingsRow
               icon={<SvgXml xml={ICON_PHONE} width={20} height={20} />}
-              label="1186"
-              value="Support"
+              label={SUPPORT_NUMBER_DISPLAY}
+              value={t("settings.supportValue")}
               onPress={handleCallSupport}
             />
             <SettingsRow
               icon={<SvgXml xml={ICON_INFO} width={20} height={20} />}
-              label="About"
+              label={t("settings.about")}
               trailing={<SvgXml xml={ICON_CHEVRON_SM} width={20} height={20} />}
               onPress={handleAbout}
             />
@@ -265,25 +295,38 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Legal</Text>
+          <Text style={styles.sectionTitle}>{t("settings.legal")}</Text>
           <View style={styles.group}>
             <SettingsRow
               icon={<SvgXml xml={ICON_INFO} width={20} height={20} />}
-              label="Privacy policy"
+              label={t("settings.privacy")}
               trailing={<SvgXml xml={ICON_CHEVRON} width={24} height={24} />}
               onPress={() => void openLegalPage(LEGAL_URLS.privacy)}
             />
             <SettingsRow
               icon={<SvgXml xml={ICON_INFO} width={20} height={20} />}
-              label="Terms of use"
+              label={t("settings.terms")}
               trailing={<SvgXml xml={ICON_CHEVRON} width={24} height={24} />}
               onPress={() => void openLegalPage(LEGAL_URLS.terms)}
             />
             <SettingsRow
               icon={<SvgXml xml={ICON_INFO} width={20} height={20} />}
-              label="Delete account"
+              label={t("settings.deletePolicy")}
               trailing={<SvgXml xml={ICON_CHEVRON} width={24} height={24} />}
               onPress={() => void openLegalPage(LEGAL_URLS.accountDeletion)}
+            />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t("settings.account")}</Text>
+          <View style={styles.group}>
+            <SettingsRow
+              icon={<Trash2 size={18} color="#B42318" />}
+              label={deletingAccount ? t("settings.deleteWorking") : t("settings.deleteAccount")}
+              danger
+              disabled={deletingAccount}
+              onPress={handleDeleteAccount}
             />
           </View>
         </View>
@@ -365,6 +408,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "500",
     color: "#000000",
+  },
+  rowLabelDanger: {
+    color: "#B42318",
   },
   rowValue: {
     flex: 1,

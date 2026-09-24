@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { useRouter } from "expo-router";
 import {
   Image,
+  Modal,
+  Pressable,
   StatusBar,
   StyleSheet,
   Text,
@@ -59,6 +62,7 @@ function OptionButton({
 
 export default function LogOrSignScreen() {
   const router = useRouter();
+  const [donateSoon, setDonateSoon] = useState(false);
   const setAuthIntent = useAuthStore((state) => state.setAuthIntent);
   const setSignupInProgress = useAuthStore((state) => state.setSignupInProgress);
   const signOut = useAuthStore((state) => state.signOut);
@@ -116,10 +120,36 @@ export default function LogOrSignScreen() {
             iconXml={ICON_DONATE}
             iconSize={20}
             label="Donate"
-            onPress={() => {}}
+            onPress={() => setDonateSoon(true)}
           />
         </View>
       </View>
+
+      <Modal
+        visible={donateSoon}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDonateSoon(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setDonateSoon(false)}>
+          <Pressable style={styles.modalCard} onPress={() => {}}>
+            <View style={styles.modalIcon}>
+              <SvgXml xml={ICON_DONATE} width={22} height={22} />
+            </View>
+            <Text style={styles.modalTitle}>Coming soon</Text>
+            <Text style={styles.modalBody}>
+              Donations are not open yet. We will let you know as soon as giving is available in the app.
+            </Text>
+            <TouchableOpacity
+              style={styles.modalButton}
+              activeOpacity={0.85}
+              onPress={() => setDonateSoon(false)}
+            >
+              <Text style={styles.modalButtonText}>Got it</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -205,5 +235,58 @@ const styles = StyleSheet.create({
     left: -14,
     width: 52,
     height: 52,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(17, 17, 17, 0.55)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 28,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 340,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    paddingHorizontal: 22,
+    paddingTop: 22,
+    paddingBottom: 18,
+    alignItems: "center",
+  },
+  modalIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#F4F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  modalTitle: {
+    fontSize: 18,
+    lineHeight: 24,
+    fontWeight: "700",
+    color: "#111111",
+  },
+  modalBody: {
+    marginTop: 8,
+    fontSize: 14,
+    lineHeight: 21,
+    color: "#4B5563",
+    textAlign: "center",
+  },
+  modalButton: {
+    marginTop: 18,
+    width: "100%",
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: "#111111",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalButtonText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "600",
   },
 });

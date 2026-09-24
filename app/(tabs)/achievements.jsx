@@ -27,6 +27,7 @@ import {
   Award,
 } from "lucide-react-native";
 import { useVolunteerImpact } from "@/hooks/useVolunteerImpact";
+import { useI18n } from "@/lib/i18n";
 import {
   buildVolunteerImpact,
   formatCount,
@@ -106,6 +107,7 @@ function MilestoneBadge({ image, label, locked, completed, onPress }) {
 }
 
 export default function AchievementsScreen() {
+  const { t } = useI18n();
   const router = useRouter();
   const { impact, isLoading, isRefreshing, refresh } = useVolunteerImpact();
 
@@ -145,7 +147,7 @@ export default function AchievementsScreen() {
       <StatusBar barStyle="dark-content" />
 
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Achievements</Text>
+        <Text style={styles.headerTitle}>{t("achievements.title")}</Text>
         <TouchableOpacity style={styles.headerButton} activeOpacity={0.7}>
           <MoreVertical size={20} color={COLORS.textDark} strokeWidth={2} />
         </TouchableOpacity>
@@ -189,7 +191,7 @@ export default function AchievementsScreen() {
                 />
               </Svg>
               <View style={styles.ringCenter}>
-                <Text style={styles.rankLabel}>RANK</Text>
+                <Text style={styles.rankLabel}>{t("achievements.rank")}</Text>
                 <Text style={styles.rankNumber}>
                   #{impact?.community_rank || 0}
                 </Text>
@@ -223,7 +225,7 @@ export default function AchievementsScreen() {
 
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Volunteering Milestones</Text>
+              <Text style={styles.sectionTitle}>{t("achievements.milestones")}</Text>
             </View>
 
             <View style={styles.badgeGrid}>
@@ -246,7 +248,7 @@ export default function AchievementsScreen() {
 
           <View style={styles.progressCard}>
             <View style={styles.progressHeader}>
-              <Text style={styles.progressTitle}>Next Rank Progress</Text>
+              <Text style={styles.progressTitle}>{t("achievements.nextRank")}</Text>
               <View style={styles.progressPill}>
                 <Text style={styles.progressPillText}>
                   {Math.round(progress * 100)}%
@@ -300,7 +302,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 40,
-    paddingBottom: 40,
+    paddingBottom: 128,
   },
   rankSection: {
     alignItems: "center",

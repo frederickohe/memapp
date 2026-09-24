@@ -23,6 +23,7 @@ import { useProminentProfiles } from "@/hooks/useProminentProfiles";
 import { usePublishedProgramsCount } from "@/hooks/usePrograms";
 import { useOpenSurveysCount } from "@/hooks/useSurveys";
 import { useVolunteerImpact } from "@/hooks/useVolunteerImpact";
+import { useI18n } from "@/lib/i18n";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import { formatNewsUpdatesLabel } from "@/lib/newsUtils";
 import { shortProfileName } from "@/lib/profileUtils";
@@ -81,6 +82,7 @@ const GREETING_H = 30;
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { t } = useI18n();
   const profile = useUserProfile();
   const unreadCount = useUnreadNotificationCount();
   const { stories: impactStories } = useImpactStories(5);
@@ -99,10 +101,12 @@ export default function HomeScreen() {
   const rankPillLabel = (impact?.rank_title || "Member").toUpperCase();
   const pointsToNextLabel = impact?.next_rank_title
     ? `${formatCount(impact.points_to_next)} pts to ${impact.next_rank_title}`
-    : "All volunteer milestones unlocked";
+    : t("home.milestonesDone");
 
   const branchLabel =
-    profile.branch === "—" ? "Your Branch" : `${profile.branch} Branch`;
+    profile.branch === "—"
+      ? t("home.yourBranch")
+      : t("home.branch", { name: profile.branch });
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const shimmer = useRef(new Animated.Value(0)).current;
@@ -154,24 +158,24 @@ export default function HomeScreen() {
     () => [
       {
         id: "news",
-        title: "News & Updates",
+        title: t("home.newsUpdates"),
         subtitle: formatNewsUpdatesLabel(newsCount),
         image: YMCA_IMAGES.britishCouncil,
         route: "/news",
       },
       {
         id: "connect",
-        title: "Y Social",
-        subtitle: "Posts & impact",
+        title: t("home.social"),
+        subtitle: t("home.socialSubtitle"),
         image: YMCA_IMAGES.youthHandshake,
         route: "/social",
       },
       {
         id: "programs",
-        title: "Programs & Activities",
+        title: t("home.programs"),
         subtitle:
           programsCount === 0
-            ? "No programs yet"
+            ? t("home.noPrograms")
             : programsCount === 1
               ? "1 Program"
               : `${programsCount} Programs`,
@@ -180,10 +184,10 @@ export default function HomeScreen() {
       },
       {
         id: "surveys",
-        title: "Surveys & Feedback",
+        title: t("home.surveys"),
         subtitle:
           surveysCount === 0
-            ? "No surveys yet"
+            ? t("home.noSurveys")
             : surveysCount === 1
               ? "1 Survey"
               : `${surveysCount} Surveys`,
@@ -191,7 +195,7 @@ export default function HomeScreen() {
         route: "/surveys",
       },
     ],
-    [newsCount, programsCount, surveysCount]
+    [newsCount, programsCount, surveysCount, t]
   );
 
   const openCard = (item) => {
@@ -282,7 +286,7 @@ export default function HomeScreen() {
                 <Star size={8} color="#fff" fill="#fff" />
               </View>
               <Text style={styles.pointsValue}>{formatCount(volunteerPoints)}</Text>
-              <Text style={styles.pointsLabel}>Points</Text>
+              <Text style={styles.pointsLabel}>{t("home.points")}</Text>
             </View>
             <LinearGradient
               colors={["#D4AF37", "#F7D774"]}
@@ -325,19 +329,19 @@ export default function HomeScreen() {
             activeOpacity={0.85}
             onPress={() => router.push("/achievements")}
           >
-            <Text style={styles.qrButtonText}>Achievement and Impact</Text>
+            <Text style={styles.qrButtonText}>{t("home.impact")}</Text>
             <ChevronRight size={20} color={DARK} strokeWidth={2.2} />
           </TouchableOpacity>
         </View>
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Impact Stories</Text>
+          <Text style={styles.sectionTitle}>{t("home.stories")}</Text>
           <TouchableOpacity
             style={styles.viewAll}
             activeOpacity={0.7}
             onPress={() => router.push("/impact")}
           >
-            <Text style={styles.viewAllText}>View All</Text>
+            <Text style={styles.viewAllText}>{t("home.viewAll")}</Text>
             <ChevronRight size={16} color={DARK} strokeWidth={2} />
           </TouchableOpacity>
         </View>
@@ -352,13 +356,13 @@ export default function HomeScreen() {
         {prominentProfiles.length > 0 ? (
           <>
             <View style={[styles.sectionHeader, styles.sectionHeaderSpaced]}>
-              <Text style={styles.sectionTitle}>Prominent Profiles</Text>
+              <Text style={styles.sectionTitle}>{t("home.profiles")}</Text>
               <TouchableOpacity
                 style={styles.viewAll}
                 activeOpacity={0.7}
                 onPress={() => router.push("/profiles")}
               >
-                <Text style={styles.viewAllText}>View All</Text>
+                <Text style={styles.viewAllText}>{t("home.viewAll")}</Text>
                 <ChevronRight size={16} color={DARK} strokeWidth={2} />
               </TouchableOpacity>
             </View>
@@ -424,13 +428,13 @@ export default function HomeScreen() {
         </View>
 
         <View style={[styles.sectionHeader, styles.sectionHeaderSpaced]}>
-          <Text style={styles.sectionTitle}>Latest News</Text>
+          <Text style={styles.sectionTitle}>{t("home.news")}</Text>
           <TouchableOpacity
             style={styles.viewAll}
             activeOpacity={0.7}
             onPress={() => router.push("/news")}
           >
-            <Text style={styles.viewAllText}>View All</Text>
+            <Text style={styles.viewAllText}>{t("home.viewAll")}</Text>
             <ChevronRight size={16} color={DARK} strokeWidth={2} />
           </TouchableOpacity>
         </View>
@@ -516,7 +520,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 13,
-    paddingBottom: 20,
+    paddingBottom: 108,
   },
   pointsCard: {
     backgroundColor: CARD_BG,

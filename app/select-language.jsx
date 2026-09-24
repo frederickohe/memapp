@@ -1,4 +1,3 @@
-import { useCallback, useState } from "react";
 import {
   Image,
   StatusBar,
@@ -8,19 +7,14 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useFocusEffect } from "expo-router/react-navigation";
 import { useRouter } from "expo-router";
 import { SvgXml } from "react-native-svg";
 
 import { ICON_BACK } from "@/components/authIcons";
 import { RADIO_EMPTY } from "@/components/signupIcons";
 import { RADIO_SELECTED_RED } from "@/components/settingsIcons";
-import {
-  APP_LANGUAGES,
-  DEFAULT_SETTINGS,
-  loadAppSettings,
-  saveAppSettings,
-} from "@/lib/appSettings";
+import { APP_LANGUAGES } from "@/lib/appSettings";
+import { useI18n } from "@/lib/i18n";
 
 function LanguageOption({ flag, label, selected, onPress }) {
   return (
@@ -50,24 +44,10 @@ function LanguageOption({ flag, label, selected, onPress }) {
 
 export default function SelectLanguageScreen() {
   const router = useRouter();
-  const [language, setLanguage] = useState(DEFAULT_SETTINGS.language);
+  const { language, setLanguage, t } = useI18n();
 
-  useFocusEffect(
-    useCallback(() => {
-      let active = true;
-      loadAppSettings().then((prefs) => {
-        if (active) setLanguage(prefs.language);
-      });
-      return () => {
-        active = false;
-      };
-    }, [])
-  );
-
-  const handleSelect = async (id) => {
+  const handleSelect = (id) => {
     setLanguage(id);
-    const prefs = await loadAppSettings();
-    await saveAppSettings({ ...prefs, language: id });
   };
 
   return (
@@ -85,10 +65,8 @@ export default function SelectLanguageScreen() {
             </View>
           </TouchableOpacity>
           <View style={styles.headerText}>
-            <Text style={styles.title}>App language</Text>
-            <Text style={styles.subtitle}>
-              You can change from the Settings section
-            </Text>
+            <Text style={styles.title}>{t("language.title")}</Text>
+            <Text style={styles.subtitle}>{t("language.subtitle")}</Text>
           </View>
         </View>
 

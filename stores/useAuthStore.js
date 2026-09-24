@@ -10,7 +10,7 @@ import {
   refreshSession as refreshSessionRequest,
 } from "@/lib/api/auth";
 import { buildSignupPayload } from "@/lib/signupPayload";
-import { getCurrentUser, updateCurrentUser } from "@/lib/api/user";
+import { deleteCurrentUser, getCurrentUser, updateCurrentUser } from "@/lib/api/user";
 import { isAuthenticated, resolveInitialRoute } from "@/lib/authRouting";
 import {
   clearDevicePin,
@@ -412,6 +412,26 @@ export const useAuthStore = create(
             user: currentUser,
           });
           return { success: false, error, user: currentUser };
+        }
+      },
+
+      deleteAccount: async () => {
+        const { token } = get();
+        if (!token) {
+          return { success: false, error: new Error("Missing auth token") };
+        }
+
+        set({ isLoading: true, error: null });
+        try {
+          await deleteCurrentUser(token);
+          await get().signOut({ clearPin: true });
+          return { success: true };
+        } catch (error) {
+          set({
+            isLoading: false,
+            error: error.message || "Unable to delete account",
+          });
+          return { success: false, error };
         }
       },
 

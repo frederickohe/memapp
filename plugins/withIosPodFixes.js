@@ -44,6 +44,10 @@ function withIosPodFixes(config) {
       const buildSettings = configurations[key]?.buildSettings;
       if (buildSettings) {
         buildSettings.ENABLE_USER_SCRIPT_SANDBOXING = "NO";
+        if (configurations[key].name === "Debug") {
+          buildSettings.DEBUG_INFORMATION_FORMAT = "dwarf";
+          buildSettings.DWARF_DSYM_FILE_SHOULD_ACCOMPANY_PRODUCT = "NO";
+        }
       }
     }
     return config;

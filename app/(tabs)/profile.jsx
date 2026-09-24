@@ -25,10 +25,17 @@ import {
 import { useAuthStore } from "@/stores/useAuthStore";
 import { navigateToSignedOutApp } from "@/lib/authNavigation";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useI18n } from "@/lib/i18n";
 import { SocialAvatar } from "@/components/social/ReelItem";
+
+function isStatusSettled(status) {
+  const value = String(status || "").trim().toLowerCase();
+  return value === "paid" || value === "not required";
+}
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { t } = useI18n();
   const logoutToWelcome = useAuthStore((state) => state.logoutToWelcome);
   const fetchProfile = useAuthStore((state) => state.fetchProfile);
   const member = useUserProfile();
@@ -63,7 +70,7 @@ export default function ProfileScreen() {
       
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Profile</Text>
+        <Text style={styles.headerTitle}>{t("profile.title")}</Text>
         <TouchableOpacity
           style={styles.settingsButton}
           activeOpacity={0.7}
@@ -95,9 +102,9 @@ export default function ProfileScreen() {
         </View>
 
         {/* Affiliation Banner */}
-        <View style={[styles.banner, styles.bannerRed]}>
+        <View style={[styles.banner, isStatusSettled(member.affiliationStatus) ? styles.bannerGreen : styles.bannerRed]}>
           <View style={styles.bannerLeft}>
-            <Text style={styles.bannerTitle}>Affiliation</Text>
+            <Text style={styles.bannerTitle}>{t("profile.affiliation")}</Text>
             <Text style={styles.bannerYear}>{member.currentYear}</Text>
           </View>
           <View style={styles.statusPill}>
@@ -108,14 +115,14 @@ export default function ProfileScreen() {
             activeOpacity={0.85}
             onPress={() => router.push("/affiliation")}
           >
-            <Text style={styles.viewButtonText}>View</Text>
+            <Text style={styles.viewButtonText}>{t("profile.view")}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Dues Banner */}
-        <View style={[styles.banner, styles.bannerGreen]}>
+        <View style={[styles.banner, isStatusSettled(member.duesStatus) ? styles.bannerGreen : styles.bannerRed]}>
           <View style={styles.bannerLeft}>
-            <Text style={styles.bannerTitle}>Dues</Text>
+            <Text style={styles.bannerTitle}>{t("profile.dues")}</Text>
             <Text style={styles.bannerYear}>{member.currentMonth}</Text>
           </View>
           <View style={styles.statusPill}>
@@ -126,12 +133,12 @@ export default function ProfileScreen() {
             activeOpacity={0.85}
             onPress={() => router.push("/affiliation")}
           >
-            <Text style={styles.viewButtonText}>View</Text>
+            <Text style={styles.viewButtonText}>{t("profile.view")}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Member Details Grid */}
-        <Text style={styles.sectionTitle}>Membership Details</Text>
+        <Text style={styles.sectionTitle}>{t("profile.membershipDetails")}</Text>
         <View style={styles.infoCard}>
           {/* Membership Type */}
           <View style={styles.infoRow}>
@@ -139,7 +146,7 @@ export default function ProfileScreen() {
               <View style={[styles.iconContainer, { backgroundColor: "#FFF4E5" }]}>
                 <Award size={18} color="#F59E0B" />
               </View>
-              <Text style={styles.infoLabel}>Membership</Text>
+              <Text style={styles.infoLabel}>{t("profile.membership")}</Text>
             </View>
             <Text style={styles.infoValue}>{member.membershipType}</Text>
           </View>
@@ -151,7 +158,7 @@ export default function ProfileScreen() {
               <View style={[styles.iconContainer, { backgroundColor: "#F3E8FF" }]}>
                 <Briefcase size={18} color="#7C3AED" />
               </View>
-              <Text style={styles.infoLabel}>Position</Text>
+              <Text style={styles.infoLabel}>{t("profile.position")}</Text>
             </View>
             <Text style={styles.infoValue}>{member.position}</Text>
           </View>
@@ -163,7 +170,7 @@ export default function ProfileScreen() {
               <View style={[styles.iconContainer, { backgroundColor: "#EEF2FF" }]}>
                 <Briefcase size={18} color="#4338CA" />
               </View>
-              <Text style={styles.infoLabel}>Past Positions</Text>
+              <Text style={styles.infoLabel}>{t("profile.pastPositions")}</Text>
             </View>
             <Text style={styles.infoValue}>
               {member.pastPositions.length ? member.pastPositions.join(", ") : "—"}
@@ -177,7 +184,7 @@ export default function ProfileScreen() {
               <View style={[styles.iconContainer, { backgroundColor: "#E5F6FF" }]}>
                 <MapPin size={18} color="#007AFF" />
               </View>
-              <Text style={styles.infoLabel}>Branch</Text>
+              <Text style={styles.infoLabel}>{t("profile.branch")}</Text>
             </View>
             <Text style={styles.infoValue}>{member.branch}</Text>
           </View>
@@ -189,7 +196,7 @@ export default function ProfileScreen() {
               <View style={[styles.iconContainer, { backgroundColor: "#EAFBF0" }]}>
                 <Calendar size={18} color="#34C759" />
               </View>
-              <Text style={styles.infoLabel}>Date Joined</Text>
+              <Text style={styles.infoLabel}>{t("profile.dateJoined")}</Text>
             </View>
             <Text style={styles.infoValue}>{member.dateJoined}</Text>
           </View>
@@ -201,7 +208,7 @@ export default function ProfileScreen() {
               <View style={[styles.iconContainer, { backgroundColor: "#F5F5F7" }]}>
                 <User size={18} color="#666" />
               </View>
-              <Text style={styles.infoLabel}>Age</Text>
+              <Text style={styles.infoLabel}>{t("profile.age")}</Text>
             </View>
             <Text style={styles.infoValue}>
               {member.age === "—" ? member.age : `${member.age} Years`}
@@ -215,14 +222,14 @@ export default function ProfileScreen() {
               <View style={[styles.iconContainer, { backgroundColor: "#FFF2F2" }]}>
                 <User size={18} color="#FF3B30" />
               </View>
-              <Text style={styles.infoLabel}>Gender</Text>
+              <Text style={styles.infoLabel}>{t("profile.gender")}</Text>
             </View>
             <Text style={styles.infoValue}>{member.gender}</Text>
           </View>
         </View>
 
         {/* Contact Info Card */}
-        <Text style={styles.sectionTitle}>Contact Information</Text>
+        <Text style={styles.sectionTitle}>{t("profile.contact")}</Text>
         <View style={styles.infoCard}>
           {/* Email */}
           <View style={styles.infoRow}>
@@ -230,7 +237,7 @@ export default function ProfileScreen() {
               <View style={[styles.iconContainer, { backgroundColor: "#F5F5F7" }]}>
                 <Mail size={16} color="#666" />
               </View>
-              <Text style={styles.infoLabel}>Email</Text>
+              <Text style={styles.infoLabel}>{t("profile.email")}</Text>
             </View>
             <Text style={styles.infoValue}>{member.email}</Text>
           </View>
@@ -242,14 +249,14 @@ export default function ProfileScreen() {
               <View style={[styles.iconContainer, { backgroundColor: "#F5F5F7" }]}>
                 <Smartphone size={16} color="#666" />
               </View>
-              <Text style={styles.infoLabel}>Phone</Text>
+              <Text style={styles.infoLabel}>{t("profile.phone")}</Text>
             </View>
             <Text style={styles.infoValue}>{member.phone}</Text>
           </View>
         </View>
 
         {/* Interests Section */}
-        <Text style={styles.sectionTitle}>Interests</Text>
+        <Text style={styles.sectionTitle}>{t("profile.interests")}</Text>
         <View style={styles.interestsContainer}>
           {member.interests.length > 0 ? (
             member.interests.map((interest, idx) => (
@@ -258,18 +265,18 @@ export default function ProfileScreen() {
               </View>
             ))
           ) : (
-            <Text style={styles.emptyInterests}>No skills added yet</Text>
+            <Text style={styles.emptyInterests}>{t("profile.noSkills")}</Text>
           )}
         </View>
 
         {/* Action Buttons */}
         <View style={styles.actionsContainer}>
           <TouchableOpacity style={styles.editButton} onPress={handleEditProfile} activeOpacity={0.8}>
-            <Text style={styles.editButtonText}>Edit Profile</Text>
+            <Text style={styles.editButtonText}>{t("profile.edit")}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogOut} activeOpacity={0.8}>
             <LogOut size={16} color="#FF0000" style={{ marginRight: 8 }} />
-            <Text style={styles.logoutButtonText}>Log Out</Text>
+            <Text style={styles.logoutButtonText}>{t("profile.logout")}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -302,7 +309,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 30,
+    paddingBottom: 118,
   },
   profileCard: {
     alignItems: "center",
