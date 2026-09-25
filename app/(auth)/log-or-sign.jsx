@@ -165,10 +165,9 @@ const styles = StyleSheet.create({
     paddingTop: 61,
   },
   logo: {
-    width: 190,
-    height: 76,
+    width: 140,
+    height: 140,
     alignSelf: "center",
-    borderRadius: 5,
   },
   welcomeText: {
     marginTop: 61,

@@ -113,8 +113,8 @@ const styles = StyleSheet.create({
   },
   logo: {
     marginTop: 49,
-    width: 120,
-    height: 48,
+    width: 96,
+    height: 96,
   },
   loaderWrap: {
     marginTop: 95,
