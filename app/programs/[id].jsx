@@ -130,6 +130,7 @@ export default function ProgramDetailScreen() {
         contentContainerStyle={styles.scrollContainer}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
+        delaysContentTouches={false}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: true }

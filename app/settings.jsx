@@ -34,6 +34,10 @@ import { useAuthStore } from "@/stores/useAuthStore";
 const LANGUAGE_ICON = require("@/assets/images/settings/icon-language.png");
 const SUPPORT_NUMBER_DISPLAY = "+233 (0) 302 224700";
 const SUPPORT_NUMBER_DIAL = "+233302224700";
+const ICON_SHIELD = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M10 1.8 4.2 4.2v4.7c0 3.9 2.4 6.7 5.8 7.8 3.4-1.1 5.8-3.9 5.8-7.8V4.2L10 1.8Z" stroke="#000" stroke-width="1.4" stroke-linejoin="round"/>
+<path d="M7.4 9.7 9.2 11.5 12.7 8" stroke="#000" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
 
 function PinIcon() {
   return (
@@ -92,7 +96,38 @@ export default function SettingsScreen() {
   const devicePinEnabled = useAuthStore((state) => state.devicePinEnabled);
   const disableLocalPin = useAuthStore((state) => state.disableLocalPin);
   const deleteAccount = useAuthStore((state) => state.deleteAccount);
+  const user = useAuthStore((state) => state.user);
+  const requestTwoFactor = useAuthStore((state) => state.requestTwoFactor);
+  const disableTwoFactor = useAuthStore((state) => state.disableTwoFactor);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [twoFactorBusy, setTwoFactorBusy] = useState(false);
+  const twoFactorEnabled = Boolean(user?.two_factor_enabled);
+
+  const handleTwoFactor = async (value) => {
+    if (twoFactorBusy) return;
+    setTwoFactorBusy(true);
+    if (value) {
+      const result = await requestTwoFactor();
+      setTwoFactorBusy(false);
+      if (!result.success) {
+        Alert.alert(
+          t("settings.twoFactorTitle"),
+          result.error?.message || t("settings.twoFactorSendFailed")
+        );
+        return;
+      }
+      router.push("/enable-two-factor");
+      return;
+    }
+    const result = await disableTwoFactor();
+    setTwoFactorBusy(false);
+    if (!result.success) {
+      Alert.alert(
+        t("settings.twoFactorTitle"),
+        result.error?.message || t("settings.twoFactorOffFailed")
+      );
+    }
+  };
 
   const handleChatSupport = () => {
     Alert.alert(t("settings.chatTitle"), t("settings.chatSoon"));
@@ -244,6 +279,18 @@ export default function SettingsScreen() {
                       return;
                     }
                     disableLocalPin();
+                  }}
+                />
+              }
+            />
+            <SettingsRow
+              icon={<SvgXml xml={ICON_SHIELD} width={20} height={20} />}
+              label={t("settings.twoFactor")}
+              trailing={
+                <SettingsSwitch
+                  value={twoFactorEnabled}
+                  onValueChange={(value) => {
+                    void handleTwoFactor(value);
                   }}
                 />
               }

@@ -8,6 +8,11 @@ import {
   verifyOtp as verifyOtpRequest,
   signOut as signOutRequest,
   refreshSession as refreshSessionRequest,
+  requestTwoFactorEnable,
+  confirmTwoFactorEnable,
+  disableTwoFactor,
+  completeTwoFactorSignIn,
+  resendTwoFactorSignIn,
 } from "@/lib/api/auth";
 import { buildSignupPayload } from "@/lib/signupPayload";
 import { deleteCurrentUser, getCurrentUser, updateCurrentUser } from "@/lib/api/user";
@@ -120,6 +125,9 @@ export const useAuthStore = create(
       pinUnlocked: false,
       pinReady: false,
       localSignedOut: false,
+      twoFactorChallenge: "",
+      twoFactorDestination: "",
+      twoFactorChannel: "",
 
       setAuthIntent: (authIntent) => set({ authIntent }),
       setPhone: (phone) => set({ phone }),
@@ -131,17 +139,26 @@ export const useAuthStore = create(
       signIn: async (email, password) => {
         set({ isLoading: true, error: null, profileLoaded: false });
         try {
+          const accountKey = String(email).trim().toLowerCase();
           const response = await signInRequest({
-            email: String(email).trim().toLowerCase(),
+            email: accountKey,
             password,
           });
+          if (response?.two_factor_required) {
+            set({
+              isLoading: false,
+              email: accountKey,
+              twoFactorChallenge: response.challenge_token || "",
+              twoFactorDestination: response.destination || "",
+              twoFactorChannel: response.channel || "",
+            });
+            return { success: true, twoFactorRequired: true, response };
+          }
           const auth = extractAuthPayload(response);
           if (!auth.token) {
             throw new Error("Sign in succeeded without a session token");
           }
           const user = await resolveUser(auth.token, auth.user);
-
-          const accountKey = String(email).trim().toLowerCase();
           const devicePinEnabled = await syncPinForAccount(accountKey);
 
           set({
@@ -167,6 +184,133 @@ export const useAuthStore = create(
           set({
             isLoading: false,
             error: error.message || "Unable to sign in",
+          });
+          return { success: false, error };
+        }
+      },
+
+      requestTwoFactor: async () => {
+        const token = get().token;
+        set({ isLoading: true, error: null });
+        try {
+          const response = await requestTwoFactorEnable(token);
+          set({
+            isLoading: false,
+            twoFactorDestination: response?.destination || "",
+            twoFactorChannel: response?.channel || "",
+          });
+          return { success: true, response };
+        } catch (error) {
+          set({
+            isLoading: false,
+            error: error.message || "Unable to send verification code",
+          });
+          return { success: false, error };
+        }
+      },
+
+      confirmTwoFactor: async (otp) => {
+        const { token, user, twoFactorChannel } = get();
+        set({ isLoading: true, error: null });
+        try {
+          const response = await confirmTwoFactorEnable(
+            { otp, channel: twoFactorChannel || undefined },
+            token
+          );
+          set({
+            isLoading: false,
+            user: { ...(user || {}), two_factor_enabled: true },
+            twoFactorChannel: "",
+            twoFactorDestination: "",
+          });
+          return { success: true, response };
+        } catch (error) {
+          set({
+            isLoading: false,
+            error: error.message || "Invalid verification code",
+          });
+          return { success: false, error };
+        }
+      },
+
+      disableTwoFactor: async () => {
+        const { token, user } = get();
+        set({ isLoading: true, error: null });
+        try {
+          const response = await disableTwoFactor(token);
+          set({
+            isLoading: false,
+            user: { ...(user || {}), two_factor_enabled: false },
+          });
+          return { success: true, response };
+        } catch (error) {
+          set({
+            isLoading: false,
+            error: error.message || "Unable to turn off two-factor authentication",
+          });
+          return { success: false, error };
+        }
+      },
+
+      completeTwoFactorSignIn: async (otp) => {
+        const challenge = get().twoFactorChallenge;
+        set({ isLoading: true, error: null, profileLoaded: false });
+        try {
+          const response = await completeTwoFactorSignIn({
+            challenge_token: challenge,
+            otp,
+          });
+          const auth = extractAuthPayload(response);
+          if (!auth.token) {
+            throw new Error("Sign in succeeded without a session token");
+          }
+          const user = await resolveUser(auth.token, auth.user);
+          const accountKey = accountKeyFromState({ ...get(), user, email: user?.email || get().email });
+          const devicePinEnabled = await syncPinForAccount(accountKey);
+          set({
+            token: auth.token,
+            refreshToken: auth.refreshToken,
+            user,
+            email: accountKey,
+            phone: user?.phone_number || get().phone,
+            authIntent: null,
+            otpVerified: false,
+            signupInProgress: false,
+            onboardingComplete: true,
+            isLoading: false,
+            devicePinEnabled,
+            pinUnlocked: true,
+            localSignedOut: false,
+            twoFactorChallenge: "",
+            twoFactorDestination: "",
+            twoFactorChannel: "",
+          });
+          logAuthToken(auth.token, "twoFactorSignIn");
+          return { success: true, response };
+        } catch (error) {
+          set({
+            isLoading: false,
+            error: error.message || "Invalid verification code",
+          });
+          return { success: false, error };
+        }
+      },
+
+      resendTwoFactorSignIn: async () => {
+        const challenge = get().twoFactorChallenge;
+        set({ isLoading: true, error: null });
+        try {
+          const response = await resendTwoFactorSignIn({ challenge_token: challenge });
+          set({
+            isLoading: false,
+            twoFactorDestination: response?.destination || get().twoFactorDestination,
+            twoFactorChannel: response?.channel || get().twoFactorChannel,
+          });
+          return { success: true, response };
+        } catch (error) {
+          set({
+            isLoading: false,
+            error: error.message || "Unable to send verification code",
           });
           return { success: false, error };
         }

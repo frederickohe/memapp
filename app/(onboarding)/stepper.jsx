@@ -480,6 +480,7 @@ export default function OnboardingStepperScreen() {
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          delaysContentTouches={false}
         >
           <SignupVideoCard />
 

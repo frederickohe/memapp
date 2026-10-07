@@ -32,6 +32,15 @@ function loadWebView() {
 
 const WebView = loadWebView();
 
+// YouTube rejects playback when a WebView pretends to be youtube.com (error 153)
+// or when the iOS WebView user agent is missing Safari. The document origin has
+// to be the app's own site, and it must match the player `origin` parameter.
+const EMBED_ORIGIN = "https://ymemberapp.com";
+const IOS_USER_AGENT =
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
+const ANDROID_USER_AGENT =
+  "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36";
+
 function buildPlayerHtml(videoId) {
   return `<!DOCTYPE html>
 <html>
@@ -48,18 +57,17 @@ function buildPlayerHtml(videoId) {
         overflow: hidden;
         font-family: -apple-system, BlinkMacSystemFont, sans-serif;
       }
-      #player {
+      #player, #player iframe {
         position: absolute;
         inset: 0;
-      }
-      #player iframe {
         width: 100% !important;
         height: 100% !important;
+        border: 0;
+        pointer-events: none;
       }
-      #shield {
-        position: absolute;
-        inset: 0;
-        z-index: 2;
+      body.native #player,
+      body.native #player iframe {
+        pointer-events: auto;
       }
       #poster {
         position: absolute;
@@ -81,6 +89,9 @@ function buildPlayerHtml(videoId) {
         justify-content: center;
         pointer-events: none;
       }
+      body.native #ui {
+        display: none;
+      }
       .controls {
         display: flex;
         align-items: center;
@@ -88,20 +99,25 @@ function buildPlayerHtml(videoId) {
         pointer-events: auto;
         padding: 8px 12px;
         border-radius: 28px;
-        background: rgba(0, 0, 0, 0.35);
+        background: #191D1A;
       }
       .btn {
         width: 38px;
         height: 38px;
         border: 0;
         border-radius: 19px;
-        background: #BBF246;
         display: flex;
         align-items: center;
         justify-content: center;
         padding: 0;
         cursor: pointer;
         -webkit-tap-highlight-color: transparent;
+      }
+      #toggle {
+        background: #FF0000;
+      }
+      #restart {
+        background: #FFFFFF;
       }
       .btn svg {
         display: block;
@@ -119,7 +135,6 @@ function buildPlayerHtml(videoId) {
   </head>
   <body>
     <div id="player"></div>
-    <div id="shield"></div>
     <div id="poster"></div>
     <div id="ui">
       <div class="controls">
@@ -128,17 +143,30 @@ function buildPlayerHtml(videoId) {
       </div>
     </div>
     <script>
-      var PLAY_ICON = '<svg class="play-icon" width="12" height="14" viewBox="0 0 12 14" fill="none"><polygon points="0,0 12,7 0,14" fill="#191D1A"/></svg>';
-      var PAUSE_ICON = '<svg width="12" height="14" viewBox="0 0 12 14" fill="none"><rect width="4" height="14" rx="1" fill="#191D1A"/><rect x="8" width="4" height="14" rx="1" fill="#191D1A"/></svg>';
+      var PLAY_ICON = '<svg class="play-icon" width="12" height="14" viewBox="0 0 12 14" fill="none"><polygon points="0,0 12,7 0,14" fill="#FFFFFF"/></svg>';
+      var PAUSE_ICON = '<svg width="12" height="14" viewBox="0 0 12 14" fill="none"><rect width="4" height="14" rx="1" fill="#FFFFFF"/><rect x="8" width="4" height="14" rx="1" fill="#FFFFFF"/></svg>';
       var RESTART_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#191D1A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>';
 
+      var VIDEO_ID = "${videoId}";
       var player = null;
       var ready = false;
       var pending = null;
       var playing = false;
+      var failed = false;
+      var fallbackTimer = null;
       var toggleBtn = document.getElementById("toggle");
       var restartBtn = document.getElementById("restart");
       var poster = document.getElementById("poster");
+
+      function pageOrigin() {
+        try {
+          var origin = window.location.origin;
+          if (origin && origin.indexOf("http") === 0) return origin;
+        } catch (e) {}
+        return "${EMBED_ORIGIN}";
+      }
+
+      var ORIGIN = pageOrigin();
 
       toggleBtn.innerHTML = PLAY_ICON;
       restartBtn.innerHTML = RESTART_ICON;
@@ -151,32 +179,70 @@ function buildPlayerHtml(videoId) {
         poster.classList.toggle("hidden", next);
       }
 
+      function useNativePlayer() {
+        if (failed) return;
+        failed = true;
+        clearTimeout(fallbackTimer);
+        document.body.classList.add("native");
+        document.body.classList.remove("playing");
+        poster.classList.add("hidden");
+        try { if (player && player.destroy) player.destroy(); } catch (e) {}
+        player = null;
+        ready = false;
+        var host = document.getElementById("player");
+        host.innerHTML = "";
+        var frame = document.createElement("iframe");
+        frame.src = "https://www.youtube-nocookie.com/embed/" + VIDEO_ID
+          + "?autoplay=1&playsinline=1&rel=0&modestbranding=1&controls=1&enablejsapi=1&origin="
+          + encodeURIComponent(ORIGIN);
+        frame.setAttribute("allow", "autoplay; encrypted-media; picture-in-picture; fullscreen");
+        frame.setAttribute("allowfullscreen", "true");
+        frame.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
+        host.appendChild(frame);
+      }
+
       function play() {
-        if (!ready || !player) {
+        if (failed) return;
+        poster.classList.add("hidden");
+        if (!ready || !player || typeof player.playVideo !== "function") {
           pending = "play";
+          clearTimeout(fallbackTimer);
+          fallbackTimer = setTimeout(function () {
+            if (!ready) useNativePlayer();
+          }, 1200);
           return;
         }
-        player.playVideo();
+        try {
+          player.playVideo();
+        } catch (e) {
+          useNativePlayer();
+        }
       }
 
       function pause() {
-        if (!ready || !player) return;
-        player.pauseVideo();
+        if (failed || !ready || !player) return;
+        try { player.pauseVideo(); } catch (e) {}
       }
 
       function restart() {
-        if (!ready || !player) {
+        if (failed) return;
+        if (!ready || !player || typeof player.seekTo !== "function") {
           pending = "restart";
+          play();
           return;
         }
-        player.seekTo(0, true);
-        player.playVideo();
+        try {
+          player.seekTo(0, true);
+          player.playVideo();
+        } catch (e) {
+          useNativePlayer();
+        }
       }
 
       toggleBtn.addEventListener("click", function (event) {
         event.preventDefault();
         event.stopPropagation();
-        if (playing) pause();
+        if (playing && !failed) pause();
         else play();
       });
 
@@ -186,11 +252,16 @@ function buildPlayerHtml(videoId) {
         restart();
       });
 
+      poster.addEventListener("click", function () {
+        play();
+      });
+
       window.onYouTubeIframeAPIReady = function () {
         player = new YT.Player("player", {
           width: "100%",
           height: "100%",
-          videoId: "${videoId}",
+          videoId: VIDEO_ID,
+          host: "https://www.youtube-nocookie.com",
           playerVars: {
             autoplay: 0,
             controls: 0,
@@ -201,13 +272,13 @@ function buildPlayerHtml(videoId) {
             iv_load_policy: 3,
             cc_load_policy: 0,
             playsinline: 1,
-            showinfo: 0,
             enablejsapi: 1,
-            origin: "https://www.youtube.com"
+            origin: ORIGIN
           },
           events: {
             onReady: function () {
               ready = true;
+              clearTimeout(fallbackTimer);
               if (pending === "restart") restart();
               else if (pending === "play") play();
               pending = null;
@@ -219,13 +290,17 @@ function buildPlayerHtml(videoId) {
                 setPlaying(false);
                 try { player.seekTo(0, true); player.pauseVideo(); } catch (e) {}
               }
+            },
+            onError: function () {
+              useNativePlayer();
             }
           }
         });
-      }
+      };
 
       var tag = document.createElement("script");
       tag.src = "https://www.youtube.com/iframe_api";
+      tag.onerror = function () { useNativePlayer(); };
       document.head.appendChild(tag);
     </script>
   </body>
@@ -272,7 +347,8 @@ export function YoutubeEmbed({ url, videoId, height = 218, style }) {
             backgroundColor: "#1a1a1a",
           },
           allow:
-            "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
+            "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen",
+          referrerPolicy: "strict-origin-when-cross-origin",
         })}
       </View>
     );
@@ -285,30 +361,27 @@ export function YoutubeEmbed({ url, videoId, height = 218, style }) {
   return (
     <View style={[styles.card, { height }, style]}>
       <WebView
-        source={{ html, baseUrl: "https://www.youtube.com" }}
+        source={{ html, baseUrl: EMBED_ORIGIN }}
         style={styles.webview}
         originWhitelist={["*"]}
         javaScriptEnabled
         domStorageEnabled
+        thirdPartyCookiesEnabled
+        sharedCookiesEnabled
         allowsInlineMediaPlayback
         mediaPlaybackRequiresUserAction={false}
-        allowsFullscreenVideo={false}
+        allowsFullscreenVideo
         bounces={false}
         scrollEnabled={false}
         nestedScrollEnabled={false}
         overScrollMode="never"
         setSupportMultipleWindows={false}
         mixedContentMode="always"
-        androidLayerType="hardware"
         allowsBackForwardNavigationGestures={false}
         hideKeyboardAccessoryView
         automaticallyAdjustContentInsets={false}
         containerStyle={styles.webviewContainer}
-        userAgent={
-          Platform.OS === "android"
-            ? "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
-            : undefined
-        }
+        userAgent={Platform.OS === "android" ? ANDROID_USER_AGENT : IOS_USER_AGENT}
       />
     </View>
   );
@@ -331,8 +404,7 @@ const styles = StyleSheet.create({
   },
   webview: {
     flex: 1,
-    backgroundColor: "transparent",
-    opacity: 0.99,
+    backgroundColor: "#1a1a1a",
   },
   play: {
     width: 38,

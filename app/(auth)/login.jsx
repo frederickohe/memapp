@@ -49,6 +49,10 @@ export default function LoginScreen() {
     setLocalError("");
     clearError();
     const result = await signIn(email, password);
+    if (result.twoFactorRequired) {
+      router.push("/(auth)/two-factor-login");
+      return;
+    }
     if (result.success) {
       navigateToAuthenticatedApp(router);
     }

@@ -168,6 +168,7 @@ function RootLayoutContent() {
           <Stack.Screen name="connect-profile" />
           <Stack.Screen name="edit-profile" />
           <Stack.Screen name="settings" />
+          <Stack.Screen name="enable-two-factor" />
           <Stack.Screen name="select-language" />
           <Stack.Screen name="set-pin" />
           <Stack.Screen name="programs" />
