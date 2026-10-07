@@ -32,7 +32,7 @@ export default function EntranceScreen() {
         <SignupVideoCard />
         <View style={styles.copy}>
           <Text style={styles.line}>
-            {`You are Part of\nYmca ${branch} Branch`}
+            {`You are Part of\nYMCA ${branch} Branch`}
           </Text>
           {memberId ? (
             <Text style={styles.line}>{`Your Member ID is ${memberId}`}</Text>

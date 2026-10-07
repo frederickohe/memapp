@@ -53,14 +53,14 @@ const NATIONALITY_FLAGS = {
   Other: "🌍",
 };
 
-const MEMBERSHIP_TYPES = ["Student", "Individual", "Family", "Corporate"];
+const MEMBERSHIP_TYPES = ["Junior", "Associate", "Full", "Life Membership", "Honorary"];
 
 const STEPS = [
   { key: "personal", title: "Personal Information" },
-  { key: "social", title: "Social Handles" },
-  { key: "contact", title: "Contact Details" },
-  { key: "membership", title: "Your Membership" },
   { key: "education", title: "Education & Career" },
+  { key: "membership", title: "Your Membership" },
+  { key: "contact", title: "Contact Details" },
+  { key: "social", title: "Social Handles" },
   { key: "consent", title: "Consent & Agreement" },
   { key: "secure", title: "Secure Your Account" },
 ];

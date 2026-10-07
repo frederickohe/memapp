@@ -46,16 +46,17 @@ export default function WelcomeScreen() {
           </View>
         </TouchableOpacity>
       </View>
-      <Text style={styles.title}>Welcome to the Ymca Family</Text>
+      <Text style={styles.title}>Welcome to the YMCA Family</Text>
       <View style={styles.body}>
         <SignupVideoCard />
         <View style={styles.copy}>
           <Text style={styles.line}>
-            Over 7 years of experience and advanced knowledge in the world of
-            sports
+            YMCA Ghana brings young people together to grow in faith, lead with
+            purpose, and serve their communities.
           </Text>
           <Text style={styles.line}>
-            Official coach of Realsoft and Impulse companies
+            Create your membership to join your branch, take part in programs,
+            and stay connected to the family.
           </Text>
         </View>
       </View>
