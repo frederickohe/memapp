@@ -1,9 +1,12 @@
+import { useCallback, useState } from "react";
 import { Image, StyleSheet, View } from "react-native";
 import { SvgXml } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
+import { useFocusEffect } from "expo-router/react-navigation";
 import { ICON_PLAY } from "@/components/signupIcons";
 import { YoutubeEmbed } from "@/components/YoutubeEmbed";
-import { getYoutubeVideoId } from "@/lib/youtube";
+import { fetchPublicAppConfig } from "@/lib/api/appConfig";
+import { getSignupVideoFallbackUrl, getYoutubeVideoId } from "@/lib/youtube";
 
 const POSTER = require("@/assets/images/signup/video-poster.png");
 
@@ -25,7 +28,24 @@ function VideoPosterFallback() {
 }
 
 export function SignupVideoCard() {
-  const videoId = getYoutubeVideoId();
+  const [videoUrl, setVideoUrl] = useState(getSignupVideoFallbackUrl);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      fetchPublicAppConfig()
+        .then((config) => {
+          if (!active || !config || typeof config.signup_youtube_url !== "string") return;
+          setVideoUrl(config.signup_youtube_url);
+        })
+        .catch(() => {});
+      return () => {
+        active = false;
+      };
+    }, [])
+  );
+
+  const videoId = getYoutubeVideoId(videoUrl);
   if (!videoId) return <VideoPosterFallback />;
   return <YoutubeEmbed videoId={videoId} />;
 }
