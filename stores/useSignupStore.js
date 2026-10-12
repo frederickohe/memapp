@@ -23,7 +23,6 @@ const INITIAL_FORM = {
   membershipId: "",
   skills: "",
   goJointer: "",
-  articularWellbeing: "",
   educationId: "",
   termsAccepted: false,
   privacyAccepted: false,

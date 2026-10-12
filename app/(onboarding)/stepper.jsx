@@ -271,13 +271,11 @@ export default function OnboardingStepperScreen() {
               label="Facebook"
               value={form.facebook}
               onChangeText={(value) => setField("facebook", value)}
-              showDropdown
             />
             <SignupFormCard
               label="Instagram"
               value={form.instagram}
               onChangeText={(value) => setField("instagram", value)}
-              showDropdown
             />
             <SignupFormCard
               label="LinkedIn"
@@ -374,11 +372,6 @@ export default function OnboardingStepperScreen() {
               label="Occupation"
               value={form.goJointer}
               onChangeText={(value) => setField("goJointer", value)}
-            />
-            <SignupFormCard
-              label="Articular Wellbeing"
-              value={form.articularWellbeing}
-              onChangeText={(value) => setField("articularWellbeing", value)}
             />
             <SignupFormCard
               label="Skills"

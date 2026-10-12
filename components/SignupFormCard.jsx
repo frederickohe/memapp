@@ -1,4 +1,4 @@
-import { createElement, useMemo, useState } from "react";
+import { createElement, useMemo, useRef, useState } from "react";
 import {
   Image,
   LayoutAnimation,
@@ -122,6 +122,7 @@ export function SignupFormCard({
   pickerTitle = "Date of Birth",
   defaultYearsAgo = 18,
 }) {
+  const inputRef = useRef(null);
   const [open, setOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [draftDate, setDraftDate] = useState(
@@ -232,13 +233,14 @@ export function SignupFormCard({
           )}
         </View>
       ) : onChangeText ? (
-        <View style={styles.valueRow}>
+        <View style={[styles.valueRow, styles.inputRow]}>
           {showDropdown && !value ? (
             <View style={styles.dropdownIcon}>
               <SvgXml xml={ICON_DROPDOWN} width={18} height={18} />
             </View>
           ) : null}
           <TextInput
+            ref={inputRef}
             style={[styles.valueInput, isDark && styles.valueOnDark]}
             value={value}
             onChangeText={onChangeText}
@@ -273,6 +275,8 @@ export function SignupFormCard({
         <TouchableOpacity onPress={handlePress} activeOpacity={0.85}>
           {body}
         </TouchableOpacity>
+      ) : onChangeText ? (
+        <Pressable onPress={() => inputRef.current?.focus()}>{body}</Pressable>
       ) : (
         body
       )}
@@ -402,17 +406,20 @@ const styles = StyleSheet.create({
     color: "#000000",
     minWidth: 0,
   },
+  inputRow: {
+    alignSelf: "stretch",
+  },
   valueInput: {
     flex: 1,
+    alignSelf: "stretch",
+    minHeight: 48,
     fontSize: 14,
     fontWeight: "500",
     color: "#000000",
-    paddingTop: 0,
-    paddingBottom: Platform.OS === "android" ? 2 : 0,
+    paddingVertical: 0,
     paddingHorizontal: 0,
     margin: 0,
     minWidth: 0,
-    height: 24,
   },
   placeholder: {
     color: "#B1B2B4",
