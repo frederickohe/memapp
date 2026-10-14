@@ -144,6 +144,9 @@ export default function NotificationsScreen() {
                       if (item.unread) {
                         markAsRead(item.id);
                       }
+                      if (item.route) {
+                        router.push(item.route);
+                      }
                     }}
                   />
                 ))}
