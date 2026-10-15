@@ -15,6 +15,7 @@ import {
   resendTwoFactorSignIn,
 } from "@/lib/api/auth";
 import { buildSignupPayload } from "@/lib/signupPayload";
+import { setSessionRefresher } from "@/lib/api/client";
 import { deleteCurrentUser, getCurrentUser, updateCurrentUser } from "@/lib/api/user";
 import { isAuthenticated, resolveInitialRoute } from "@/lib/authRouting";
 import {
@@ -616,6 +617,15 @@ export const useAuthStore = create(
       },
 
       getInitialRoute: () => resolveInitialRoute(get()),
+
+      ensureFreshSession: () => {
+        if (!sessionRefreshInFlight) {
+          sessionRefreshInFlight = refreshStoredSession().finally(() => {
+            sessionRefreshInFlight = null;
+          });
+        }
+        return sessionRefreshInFlight;
+      },
     }),
     {
       name: "memapp-auth-store",
@@ -637,6 +647,41 @@ export const useAuthStore = create(
       },
     }
   )
+);
+
+let sessionRefreshInFlight = null;
+
+async function refreshStoredSession() {
+  const { refreshToken, email } = useAuthStore.getState();
+  if (!refreshToken) return { success: false };
+
+  try {
+    const response = await refreshSessionRequest({
+      refresh_token: refreshToken,
+      email,
+    });
+    const auth = extractAuthPayload(response);
+    if (!auth.token) return { success: false };
+
+    useAuthStore.setState({
+      token: auth.token,
+      refreshToken: auth.refreshToken || refreshToken,
+      email: email || useAuthStore.getState().email,
+      error: null,
+    });
+    return { success: true };
+  } catch {
+    // Keep the saved session. The server still accepts it for the
+    // refresh-token lifetime, so a failed refresh must not sign them out.
+    return { success: false };
+  }
+}
+
+setSessionRefresher(() =>
+  useAuthStore
+    .getState()
+    .ensureFreshSession()
+    .then((result) => (result?.success ? useAuthStore.getState().token : null))
 );
 
 export function getPostAuthRoute(intent) {

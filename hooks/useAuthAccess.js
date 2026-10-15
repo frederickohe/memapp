@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { isAuthenticated } from "@/lib/authRouting";
 
@@ -18,6 +18,8 @@ export function useAuthAccess() {
   const pinReady = useAuthStore((state) => state.pinReady);
   const localSignedOut = useAuthStore((state) => state.localSignedOut);
   const hydrateDevicePin = useAuthStore((state) => state.hydrateDevicePin);
+  const ensureFreshSession = useAuthStore((state) => state.ensureFreshSession);
+  const sessionRefreshStarted = useRef(false);
 
   useEffect(() => {
     if (useAuthStore.persist.hasHydrated()) {
@@ -32,6 +34,12 @@ export function useAuthAccess() {
     if (!authHydrated) return;
     hydrateDevicePin();
   }, [authHydrated, hydrateDevicePin]);
+
+  useEffect(() => {
+    if (!authHydrated || !token || sessionRefreshStarted.current) return;
+    sessionRefreshStarted.current = true;
+    ensureFreshSession();
+  }, [authHydrated, token, ensureFreshSession]);
 
   const state = {
     token,
